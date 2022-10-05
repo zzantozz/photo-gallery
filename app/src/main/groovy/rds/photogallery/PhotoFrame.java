@@ -6,8 +6,14 @@ import com.intellij.uiDesigner.core.Spacer;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Function;
 
 public class PhotoFrame {
     private final JFrame theFrame;
@@ -24,6 +30,7 @@ public class PhotoFrame {
     private PhotoPanel photoPanel;
     private final String name;
     private final PersistentFrameState frameState;
+    private List<Function<PhotoFrame, Void>> disposeListeners = new ArrayList<>();
 
     public PhotoFrame(String name, PersistentFrameState frameState) {
         this.name = name;
@@ -54,6 +61,29 @@ public class PhotoFrame {
         result.setUndecorated(frameConfiguration.isDistractionFree());
         result.setAlwaysOnTop(frameConfiguration.isAlwaysOnTop());
         result.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        // Watch for user closing frames and notify listeners
+        result.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                for (Function<PhotoFrame, Void> disposeListener : disposeListeners) {
+                    disposeListener.apply(PhotoFrame.this);
+                }
+            }
+        });
+        // Watch for frame move/resize to update frame state
+        result.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                frameState.getNormalConfig().setWidth(theFrame.getWidth());
+                frameState.getNormalConfig().setHeight(theFrame.getHeight());
+            }
+
+            @Override
+            public void componentMoved(ComponentEvent e) {
+                frameState.getNormalConfig().setX(theFrame.getX());
+                frameState.getNormalConfig().setY(theFrame.getY());
+            }
+        });
 //        controlPanel.setVisible(!frameConfiguration.isDistractionFree());
         rowsField.setText(Integer.toString(frameConfiguration.getRows()));
         columnsField.setText(Integer.toString(frameConfiguration.getColumns()));
@@ -99,6 +129,10 @@ public class PhotoFrame {
 
     public void show() {
         theFrame.setVisible(true);
+    }
+
+    public void onDispose(Function<PhotoFrame, Void> f) {
+        disposeListeners.add(f);
     }
 
     public Collection<PhotoPanel> getPanels() {

@@ -24,6 +24,16 @@ class PhotosController {
 
     void adopt(PhotoFrame photoFrame) {
         photoFrames.add(photoFrame)
+        photoFrame.onDispose {
+            unadopt(photoFrame)
+        }
+    }
+
+    void unadopt(PhotoFrame photoFrame) {
+        photoFrames.remove(photoFrame)
+        photoFrames.panels.each {
+            panelsToChange.remove(it)
+        }
     }
 
     void start() {
