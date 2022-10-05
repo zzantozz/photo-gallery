@@ -53,7 +53,7 @@ public class PhotoFrame {
             frameConfiguration = this.frameState.getNormalConfig();
         }
         final JFrame result = new JFrame();
-        result.setTitle("PhotoPanels " + name);
+        result.setTitle("Photo Gallery " + name);
         result.setContentPane(mainPanel);
         mainDisplayArea.setLayout(new GridLayout(1, 1));
         mainDisplayArea.add(photoPanel);

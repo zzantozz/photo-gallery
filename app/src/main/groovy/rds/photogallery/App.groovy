@@ -10,6 +10,7 @@ import java.util.List
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.atomic.AtomicInteger
 
 /*
  * A singleton that represents the running application. This acts sort of as an IoC container for everything else. It
@@ -25,6 +26,8 @@ class App {
     String frameStatePath = 'frame-state.json'
 
     PhotosController controller
+    AtomicInteger frameCount = new AtomicInteger(1)
+
     private static final App INSTANCE = new App()
 
     static App getInstance() {
@@ -68,7 +71,7 @@ class App {
     }
 
     def newPhotoFrame(PersistentFrameState frameState) {
-        def newFrame = new PhotoFrame("name me", frameState)
+        def newFrame = new PhotoFrame("frame" + frameCount.getAndIncrement(), frameState)
         newFrame.onDispose {
             controller.unadopt(it)
             photoFrames.remove(it)
