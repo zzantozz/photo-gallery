@@ -24,16 +24,17 @@ public class PhotoPanel extends JPanel {
         if (photo == null) {
             DefaultGroovyMethods.println(this, "Nothing to draw!");
             return;
-
         }
-        BufferedImage backBuffer = getGraphicsConfiguration().createCompatibleImage(getWidth(), getHeight());
-        Graphics backBufferGraphics = backBuffer.getGraphics();
-        fillBlack(backBufferGraphics, getBounds());
-        BufferedImage image = photo.getImage();
-        Point centerPosition = findCenterPosition(new Dimension(image.getWidth(null), image.getHeight(null)), this.getSize());
-        backBufferGraphics.drawImage(image, centerPosition.x, centerPosition.y, null);
-        getGraphics().drawImage(backBuffer, 0, 0, null);
-        backBufferGraphics.dispose();
+        Metrics.time("repaint photo panel", () -> {
+            BufferedImage backBuffer = getGraphicsConfiguration().createCompatibleImage(getWidth(), getHeight());
+            Graphics backBufferGraphics = backBuffer.getGraphics();
+            fillBlack(backBufferGraphics, getBounds());
+            BufferedImage image = photo.getImage();
+            Point centerPosition = findCenterPosition(new Dimension(image.getWidth(null), image.getHeight(null)), this.getSize());
+            backBufferGraphics.drawImage(image, centerPosition.x, centerPosition.y, null);
+            getGraphics().drawImage(backBuffer, 0, 0, null);
+            backBufferGraphics.dispose();
+        });
     }
 
     public static Point findCenterPosition(Dimension window, Dimension fullArea) {

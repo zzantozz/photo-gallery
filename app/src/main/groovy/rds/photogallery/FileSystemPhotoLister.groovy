@@ -23,7 +23,7 @@ class FileSystemPhotoLister implements PhotoLister {
     }
 
     private Iterator<Path> getIterator() {
-        this.fileIterator = Metrics.time("getting photo iterator from file system", {
+        this.fileIterator = Metrics.timeAndReturn("getting photo iterator from file system", {
             Files.walk(Paths.get(rootDir))
                     .filter(Files::isRegularFile)
                     .filter((f) -> photoFileExtensions.any {
