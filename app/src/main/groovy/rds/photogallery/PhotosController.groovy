@@ -58,8 +58,7 @@ class PhotosController {
             photo.image = resized
             panelToChange.setPhoto(photo)
             panelToChange.refresh()
-            true
-        } as ThrowableReporting.Callable<Boolean>)
+        } as ThrowableReporting.Runnable)
         futurePanelChange.get()
     }
 }
