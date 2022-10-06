@@ -76,4 +76,8 @@ class PhotosController {
         def newPanels = photoFrame.addColumn()
         newPanels.each { panelsToChange.add(it) }
     }
+
+    void panelImageSizeIsWrong(PhotoPanel photoPanel, CompletePhoto photo) {
+        println "Notified that " + photoPanel + " has wrongly sized image"
+    }
 }

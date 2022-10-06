@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 public class PhotoFrame {
@@ -30,6 +31,7 @@ public class PhotoFrame {
     private final String name;
     private final PersistentFrameState frameState;
     private List<Function<PhotoFrame, Void>> disposeListeners = new ArrayList<>();
+    private AtomicInteger panelCount = new AtomicInteger();
 
     public PhotoFrame(String name, PersistentFrameState frameState) {
         this.name = name;
@@ -60,7 +62,7 @@ public class PhotoFrame {
         theFrameLayout = new GridLayout(rows, columns);
         mainDisplayArea.setLayout(theFrameLayout);
         for (int i = 0; i < rows * columns; i++) {
-            PhotoPanel photoPanel = new PhotoPanel();
+            PhotoPanel photoPanel = new PhotoPanel(this.name + ":panel" + panelCount.incrementAndGet());
             photoPanels.add(photoPanel);
             mainDisplayArea.add(photoPanel);
         }
@@ -179,7 +181,7 @@ public class PhotoFrame {
         List<PhotoPanel> changedPanels = new ArrayList<>();
         if (panelDiff > 0) {
             for (int i = 0; i < panelDiff; i++) {
-                PhotoPanel photoPanel = new PhotoPanel();
+                PhotoPanel photoPanel = new PhotoPanel(this.name + ":panel" + panelCount.incrementAndGet());
                 photoPanels.add(photoPanel);
                 mainDisplayArea.add(photoPanel);
                 changedPanels.add(photoPanel);

@@ -15,6 +15,13 @@ import java.awt.image.BufferedImage;
  * to object.getX() if it exists, and I don't want to risk losing precision.
  */
 public class PhotoPanel extends JPanel {
+    private final String name;
+    private CompletePhoto photo;
+
+    public PhotoPanel(String name) {
+        this.name = name;
+    }
+
     public void setPhoto(CompletePhoto photo) {
         this.photo = photo;
     }
@@ -30,8 +37,21 @@ public class PhotoPanel extends JPanel {
             Graphics backBufferGraphics = backBuffer.getGraphics();
             fillBlack(backBufferGraphics, getBounds());
             BufferedImage image = photo.getImage();
-            Point centerPosition = findCenterPosition(new Dimension(image.getWidth(null), image.getHeight(null)), this.getSize());
-            backBufferGraphics.drawImage(image, centerPosition.x, centerPosition.y, null);
+            // Ideally, this image will have already been scaled for this panel, but if the frame is getting resized, or
+            // the frame layout is being modified, panels can be a different size than their image until a new one is
+            // given to them. If the image fits, draw it. If not, scale it right here to fit the panel. It'll be lower
+            // quality, but at least it fits visually until a new image can be delivered.
+            if (
+                    (image.getWidth() == this.getWidth() && image.getHeight() <= this.getHeight()) ||
+                            (image.getHeight() == this.getHeight() && image.getWidth() <= this.getWidth())) {
+                // Image was scaled to this panel, so just draw it
+                Point centerPosition = findCenterPosition(new Dimension(image.getWidth(null), image.getHeight(null)), this.getSize());
+                backBufferGraphics.drawImage(image, centerPosition.x, centerPosition.y, null);
+            } else {
+                // Image is wrong size for this panel, so let the controller know, and scale it to match.
+                App.getInstance().getController().panelImageSizeIsWrong(this, photo);
+                backBufferGraphics.drawImage(image, 0, 0, getWidth(), getHeight(), null);
+            }
             g.drawImage(backBuffer, 0, 0, null);
             backBufferGraphics.dispose();
         });
@@ -60,5 +80,11 @@ public class PhotoPanel extends JPanel {
         return photo;
     }
 
-    private CompletePhoto photo;
+    @Override
+    public String toString() {
+        return "PhotoPanel{" +
+                "name='" + name + '\'' +
+                ", photo=" + photo +
+                '}';
+    }
 }

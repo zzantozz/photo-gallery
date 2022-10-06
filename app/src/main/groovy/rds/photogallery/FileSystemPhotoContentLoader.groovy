@@ -15,6 +15,6 @@ class FileSystemPhotoContentLoader implements PhotoContentLoader {
         if (read == null) {
             throw new IllegalStateException("Failed to read image from file: " + photoRelativePath)
         }
-        new CompletePhoto(read)
+        new CompletePhoto(photoRelativePath, read)
     }
 }
