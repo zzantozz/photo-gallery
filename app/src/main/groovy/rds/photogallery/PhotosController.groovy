@@ -49,9 +49,6 @@ class PhotosController {
                 PhotoTools.resizeImage(photo.image, panelToChange.size, { println it }) })
             photo.image = resized
             panelToChange.setPhoto(photo)
-            // Shutdown problem here: if user closes final frame causing a shutdown, this can try to paint a final
-            // image, resulting in an NPE when trying to getGraphics() from the panel to paint on. Shutdown needs to
-            // somehow short-circuit all such activities without causing errors?
             panelToChange.refresh()
         } as ThrowableReporting.Runnable)
         futurePanelChange.get()
