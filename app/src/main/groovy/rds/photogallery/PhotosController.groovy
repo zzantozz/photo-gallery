@@ -24,20 +24,17 @@ class PhotosController {
 
     void adopt(PhotoFrame photoFrame) {
         photoFrames.add(photoFrame)
-        photoFrame.onDispose {
-            unadopt(photoFrame)
-        }
     }
 
     void unadopt(PhotoFrame photoFrame) {
         photoFrames.remove(photoFrame)
-        photoFrames.panels.each {
+        photoFrame.panels.each {
             panelsToChange.remove(it)
         }
     }
 
     void start() {
-        scheduledExecutorService.scheduleWithFixedDelay({ next() }, 2, 2, TimeUnit.SECONDS)
+        scheduledExecutorService.scheduleWithFixedDelay({ next() }, 0, 3, TimeUnit.SECONDS)
     }
 
     void next() {
@@ -48,15 +45,18 @@ class PhotosController {
         }
         def panelToChange = panelsToChange.remove()
         def nextPhoto = photoLister.next()
-        BlockingQueue<CompletePhoto> q = new SynchronousQueue<>()
         def futurePhoto = executorService.submit({
-            photoContentLoader.load(nextPhoto)
+            Metrics.timeAndReturn('load photo', { photoContentLoader.load(nextPhoto) })
         } as ThrowableReporting.Callable<CompletePhoto>)
         def futurePanelChange = executorService.submit({
             def photo = futurePhoto.get()
-            def resized = PhotoTools.resizeImage(photo.image, panelToChange.size, { println it })
+            def resized = Metrics.timeAndReturn('resize photo', {
+                PhotoTools.resizeImage(photo.image, panelToChange.size, { println it }) })
             photo.image = resized
             panelToChange.setPhoto(photo)
+            // Shutdown problem here: if user closes final frame causing a shutdown, this can try to paint a final
+            // image, resulting in an NPE when trying to getGraphics() from the panel to paint on. Shutdown needs to
+            // somehow short-circuit all such activities without causing errors?
             panelToChange.refresh()
         } as ThrowableReporting.Runnable)
         futurePanelChange.get()
