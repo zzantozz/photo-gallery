@@ -50,7 +50,19 @@ public class PhotoPanel extends JPanel {
             } else {
                 // Image is wrong size for this panel, so let the controller know, and scale it to match.
                 App.getInstance().getController().panelImageSizeIsWrong(this, photo);
-                backBufferGraphics.drawImage(image, 0, 0, getWidth(), getHeight(), null);
+                double imageRatio = (double) image.getWidth() / image.getHeight();
+                double panelRatio = (double) this.getWidth() / this.getHeight();
+                final int newWidth;
+                final int newHeight;
+                if (imageRatio > panelRatio) {
+                    newWidth = this.getWidth();
+                    newHeight = (int) (image.getHeight() * ((double) newWidth / image.getWidth()));
+                } else {
+                    newHeight = this.getHeight();
+                    newWidth = (int) (image.getWidth() * ((double) newHeight / image.getHeight()));
+                }
+                Point centerPosition = findCenterPosition(new Dimension(newWidth, newHeight), this.getSize());
+                backBufferGraphics.drawImage(image, centerPosition.x, centerPosition.y, newWidth, newHeight, null);
             }
             g.drawImage(backBuffer, 0, 0, null);
             backBufferGraphics.dispose();
