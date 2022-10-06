@@ -61,4 +61,24 @@ class PhotosController {
         } as ThrowableReporting.Runnable)
         futurePanelChange.get()
     }
+
+    void removeRowFromFrame(PhotoFrame photoFrame) {
+        def removedPanels = photoFrame.removeRow()
+        removedPanels.each { panelsToChange.remove(it) }
+    }
+
+    void addRowToFrame(PhotoFrame photoFrame) {
+        def newPanels = photoFrame.addRow()
+        newPanels.each { panelsToChange.add(it) }
+    }
+
+    void removeColumnFromFrame(PhotoFrame photoFrame) {
+        def removedPanels = photoFrame.removeColumn()
+        removedPanels.each { panelsToChange.remove(it) }
+    }
+
+    void addColumnToFrame(PhotoFrame photoFrame) {
+        def newPanels = photoFrame.addColumn()
+        newPanels.each { panelsToChange.add(it) }
+    }
 }

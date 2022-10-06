@@ -6,17 +6,16 @@ import com.intellij.uiDesigner.core.Spacer;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 
 public class PhotoFrame {
     private final JFrame theFrame;
+    private GridLayout theFrameLayout;
     private JButton newFrameButton;
     private JButton lessColumnsButton;
     private JTextField columnsField;
@@ -27,7 +26,7 @@ public class PhotoFrame {
     private JPanel mainDisplayArea;
     private JPanel mainPanel;
     private JPanel controlPanel;
-    private PhotoPanel photoPanel;
+    private List<PhotoPanel> photoPanels = new CopyOnWriteArrayList<>();
     private final String name;
     private final PersistentFrameState frameState;
     private List<Function<PhotoFrame, Void>> disposeListeners = new ArrayList<>();
@@ -40,7 +39,6 @@ public class PhotoFrame {
 //        setShowingRatings(currentFrameConfiguration().isShowingRatings());
 //        setShowingNames(currentFrameConfiguration().isShowingNames());
 //        setShowingTags(currentFrameConfiguration().isShowingTags());
-        this.photoPanel = new PhotoPanel();
         this.theFrame = buildInitialJFrame();
 //        cloneButton.addActionListener(e -> Application.instance.newPhotoFrame(PhotoFrameAdvanced.this));
     }
@@ -55,8 +53,17 @@ public class PhotoFrame {
         final JFrame result = new JFrame();
         result.setTitle("Photo Gallery " + name);
         result.setContentPane(mainPanel);
-        mainDisplayArea.setLayout(new GridLayout(1, 1));
-        mainDisplayArea.add(photoPanel);
+        int rows = frameConfiguration.getRows();
+        int columns = frameConfiguration.getColumns();
+        // Interestingly, while GridLayout essentially ignores its configured number of columns, it requires it in the
+        // constructor if you want to set rows...
+        theFrameLayout = new GridLayout(rows, columns);
+        mainDisplayArea.setLayout(theFrameLayout);
+        for (int i = 0; i < rows * columns; i++) {
+            PhotoPanel photoPanel = new PhotoPanel();
+            photoPanels.add(photoPanel);
+            mainDisplayArea.add(photoPanel);
+        }
         result.setBounds(frameConfiguration.getX(), frameConfiguration.getY(), frameConfiguration.getWidth(), frameConfiguration.getHeight());
         result.setUndecorated(frameConfiguration.isDistractionFree());
         result.setAlwaysOnTop(frameConfiguration.isAlwaysOnTop());
@@ -87,6 +94,10 @@ public class PhotoFrame {
 //        controlPanel.setVisible(!frameConfiguration.isDistractionFree());
         rowsField.setText(Integer.toString(frameConfiguration.getRows()));
         columnsField.setText(Integer.toString(frameConfiguration.getColumns()));
+        lessRowsButton.addActionListener(e -> App.getInstance().getController().removeRowFromFrame(PhotoFrame.this));
+        moreRowsButton.addActionListener(e -> App.getInstance().getController().addRowToFrame(PhotoFrame.this));
+        lessColumnsButton.addActionListener(e -> App.getInstance().getController().removeColumnFromFrame(PhotoFrame.this));
+        moreColumnsButton.addActionListener(e -> App.getInstance().getController().addColumnToFrame(PhotoFrame.this));
 /*
         result.addComponentListener(new ComponentAdapter() {
             // Get the panels set up the first time this frame is shown, but I don't think it needs to
@@ -127,6 +138,63 @@ public class PhotoFrame {
         return result;
     }
 
+    public FrameConfiguration getCurrentFrameConfiguration() {
+        if (frameState.isFullScreen()) {
+            return frameState.getFullScreenConfig();
+        } else {
+            return frameState.getNormalConfig();
+        }
+    }
+
+    public List<PhotoPanel> addRow() {
+        return modifyGridLayout(1, 0);
+    }
+
+    public List<PhotoPanel> removeRow() {
+        return modifyGridLayout(-1, 0);
+    }
+
+    public List<PhotoPanel> addColumn() {
+        return modifyGridLayout(0, 1);
+    }
+
+    public List<PhotoPanel> removeColumn() {
+        return modifyGridLayout(0, -1);
+    }
+
+    private List<PhotoPanel> modifyGridLayout(int rowsModifier, int columnsModifier) {
+        FrameConfiguration configuration = getCurrentFrameConfiguration();
+        int currentRows = configuration.getRows();
+        int currentColumns = configuration.getColumns();
+        int currentPanelCount = currentRows * currentColumns;
+        int newColumns = currentColumns + columnsModifier;
+        int newRows = currentRows + rowsModifier;
+        int newPanelCount = newColumns * newRows;
+        columnsField.setText(Integer.toString(newColumns));
+        rowsField.setText(Integer.toString(newRows));
+        configuration.setColumns(newColumns);
+        configuration.setRows(newRows);
+        theFrameLayout.setRows(newRows);
+        int panelDiff = newPanelCount - currentPanelCount;
+        List<PhotoPanel> changedPanels = new ArrayList<>();
+        if (panelDiff > 0) {
+            for (int i = 0; i < panelDiff; i++) {
+                PhotoPanel photoPanel = new PhotoPanel();
+                photoPanels.add(photoPanel);
+                mainDisplayArea.add(photoPanel);
+                changedPanels.add(photoPanel);
+            }
+        } else {
+            for (int i = 0; i < -1 * panelDiff; i++) {
+                PhotoPanel photoPanel = photoPanels.remove(0);
+                mainDisplayArea.remove(photoPanel);
+                changedPanels.add(photoPanel);
+            }
+        }
+        mainDisplayArea.validate();
+        return changedPanels;
+    }
+
     public void show() {
         theFrame.setVisible(true);
     }
@@ -136,7 +204,7 @@ public class PhotoFrame {
     }
 
     public Collection<PhotoPanel> getPanels() {
-        return List.of(photoPanel);
+        return photoPanels;
     }
     // Note to self: The generated form code should appear down here at the bottom of the file, but you have to enable
     // that in Settings under GUI Designer. It defaults to creating binary output, which wouldn't carry over to a gradle
