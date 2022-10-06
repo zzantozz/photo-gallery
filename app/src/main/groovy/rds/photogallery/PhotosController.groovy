@@ -9,16 +9,11 @@ import java.util.concurrent.*
 class PhotosController {
     PhotoLister photoLister
     PhotoContentLoader photoContentLoader
-    ScheduledExecutorService scheduledExecutorService
-    ExecutorService executorService
     List<PhotoFrame> photoFrames = new CopyOnWriteArrayList<>()
     Queue<PhotoPanel> panelsToChange = new ConcurrentLinkedQueue<>()
 
-    PhotosController(PhotoLister photoLister, PhotoContentLoader photoContentLoader,
-                     ScheduledExecutorService scheduledExecutorService, ExecutorService executorService) {
+    PhotosController(PhotoLister photoLister, PhotoContentLoader photoContentLoader) {
         this.photoLister = photoLister
-        this.scheduledExecutorService = scheduledExecutorService
-        this.executorService = executorService
         this.photoContentLoader = photoContentLoader
     }
 
@@ -34,7 +29,7 @@ class PhotosController {
     }
 
     void start() {
-        scheduledExecutorService.scheduleWithFixedDelay({ next() }, 0, 3, TimeUnit.SECONDS)
+        App.instance.scheduler.scheduleWithFixedDelay({ next() }, 0, 3, TimeUnit.SECONDS)
     }
 
     void next() {
@@ -45,10 +40,10 @@ class PhotosController {
         }
         def panelToChange = panelsToChange.remove()
         def nextPhoto = photoLister.next()
-        def futurePhoto = executorService.submit({
+        def futurePhoto = App.instance.generalWorkPool.submit({
             Metrics.timeAndReturn('load photo', { photoContentLoader.load(nextPhoto) })
         } as ThrowableReporting.Callable<CompletePhoto>)
-        def futurePanelChange = executorService.submit({
+        def futurePanelChange = App.instance.generalWorkPool.submit({
             def photo = futurePhoto.get()
             def resized = Metrics.timeAndReturn('resize photo', {
                 PhotoTools.resizeImage(photo.image, panelToChange.size, { println it }) })

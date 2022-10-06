@@ -2,7 +2,6 @@ package rds.photogallery
 
 import com.fasterxml.jackson.databind.ObjectMapper
 
-import javax.swing.*
 import java.awt.*
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -44,7 +43,7 @@ class App {
         String photoRootDir = JOptionPane.showInputDialog("Enter path to photo dir")
         def photoLister = new FileSystemPhotoLister(photoRootDir)
         def photoContentLoader = new FileSystemPhotoContentLoader(photoRootDir)
-        controller = new PhotosController(photoLister, photoContentLoader, this.scheduler, this.generalWorkPool)
+        controller = new PhotosController(photoLister, photoContentLoader)
 
         def frameStateConfigFilePath = Paths.get(frameStatePath)
         final List<PersistentFrameState> frameStates
