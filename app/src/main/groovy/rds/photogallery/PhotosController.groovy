@@ -1,5 +1,6 @@
 package rds.photogallery
 
+import java.awt.Dimension
 import java.util.concurrent.*
 
 /**
@@ -11,6 +12,28 @@ class PhotosController {
     PhotoContentLoader photoContentLoader
     List<PhotoFrame> photoFrames = new CopyOnWriteArrayList<>()
     Queue<PhotoPanel> panelsToChange = new ConcurrentLinkedQueue<>()
+    PriorityBlockingQueue<PhotoNeed> photoNeeds = new PriorityBlockingQueue<>()
+
+    static class PhotoNeed implements Comparable<PhotoNeed> {
+        static final int WRONG_IMAGE_SIZE_PRIORITY = 9
+        static final int EMPTY_PANEL_PRIORITY = 10
+        int priority
+        String relativePath
+        Dimension size
+        PhotoPanel panel
+
+        PhotoNeed(int priority, String relativePath, Dimension size, PhotoPanel panel) {
+            this.relativePath = relativePath
+            this.size = size
+            this.panel = panel
+            this.priority = priority
+        }
+
+        @Override
+        int compareTo(PhotoNeed o) {
+            this.priority <=> o.priority
+        }
+    }
 
     PhotosController(PhotoLister photoLister, PhotoContentLoader photoContentLoader) {
         this.photoLister = photoLister
@@ -30,6 +53,24 @@ class PhotosController {
 
     void start() {
         App.instance.scheduler.scheduleWithFixedDelay({ next() }, 0, 3, TimeUnit.SECONDS)
+        App.instance.scheduler.scheduleWithFixedDelay( { allocatePhotoNeeds() }, 0, 250, TimeUnit.MILLISECONDS)
+    }
+
+    def allocatePhotoNeeds() {
+        while (!photoNeeds.isEmpty()) {
+            def need = photoNeeds.take()
+            App.instance.generalWorkPool.submit({
+                def photo = Metrics.timeAndReturn('load needed photo', {
+                    photoContentLoader.load(need.relativePath)
+                })
+                def resized = Metrics.timeAndReturn('resize needed photo', {
+                    PhotoTools.resizeImage(photo.image, need.panel.size, { println it })
+                })
+                photo.image = resized
+                need.panel.setPhoto(photo)
+                need.panel.refresh()
+            })
+        }
     }
 
     void next() {
@@ -75,6 +116,10 @@ class PhotosController {
     }
 
     void panelImageSizeIsWrong(PhotoPanel photoPanel, CompletePhoto photo) {
-        println "Notified that " + photoPanel + " has wrongly sized image"
+        photoNeeds.add(new PhotoNeed(PhotoNeed.WRONG_IMAGE_SIZE_PRIORITY, photo.getRelativePath(), photoPanel.getSize(), photoPanel))
+    }
+
+    void panelHasNoImage(PhotoPanel photoPanel) {
+        photoNeeds.add(new PhotoNeed(PhotoNeed.EMPTY_PANEL_PRIORITY, photoLister.next(), photoPanel.getSize(), photoPanel))
     }
 }

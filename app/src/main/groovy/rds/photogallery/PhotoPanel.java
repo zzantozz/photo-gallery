@@ -29,7 +29,7 @@ public class PhotoPanel extends JPanel {
     @Override
     public void paint(Graphics g) {
         if (photo == null) {
-            DefaultGroovyMethods.println(this, "Nothing to draw!");
+            App.getInstance().getController().panelHasNoImage(this);
             return;
         }
         Metrics.time("paint photo panel", () -> {
