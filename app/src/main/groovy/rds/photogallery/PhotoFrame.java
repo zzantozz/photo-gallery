@@ -27,11 +27,11 @@ public class PhotoFrame {
     private JPanel mainDisplayArea;
     private JPanel mainPanel;
     private JPanel controlPanel;
-    private List<PhotoPanel> photoPanels = new CopyOnWriteArrayList<>();
+    private final List<PhotoPanel> photoPanels = new CopyOnWriteArrayList<>();
     private final String name;
     private final PersistentFrameState frameState;
-    private List<Function<PhotoFrame, Void>> disposeListeners = new ArrayList<>();
-    private AtomicInteger panelCount = new AtomicInteger();
+    private final List<Function<PhotoFrame, Void>> disposeListeners = new ArrayList<>();
+    private final AtomicInteger panelCount = new AtomicInteger();
 
     public PhotoFrame(String name, PersistentFrameState frameState) {
         this.name = name;
