@@ -1,7 +1,9 @@
 package rds.photogallery
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 
+import javax.swing.JOptionPane
 import java.awt.*
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -9,6 +11,7 @@ import java.util.List
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 /*
@@ -24,6 +27,7 @@ class App {
     PersistentFrameState lastFrameState
     String frameStatePath = 'frame-state.json'
 
+    PhotoContentLoader photoContentLoader
     PhotosController controller
     AtomicInteger frameCount = new AtomicInteger(1)
 
@@ -37,13 +41,33 @@ class App {
         getInstance().start()
     }
 
+    void submitGeneralWork(Runnable task) {
+        generalWorkPool.submit(new ThrowableReporting.Runnable() {
+            @Override
+            void doRun() throws Throwable {
+                task.run()
+            }
+        })
+    }
+
+    void scheduleWithFixedDelay(Runnable task, long initialDelay, long delay, TimeUnit timeUnit) {
+        scheduler.scheduleWithFixedDelay(new ThrowableReporting.Runnable() {
+            @Override
+            void doRun() throws Throwable {
+                task.run()
+            }
+        }, initialDelay, delay, timeUnit)
+    }
+
     def start() {
-        generalWorkPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 1)
-        scheduler = Executors.newSingleThreadScheduledExecutor()
+        generalWorkPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 1,
+                new ThreadFactoryBuilder().setNameFormat('general-worker-%d').build())
+        scheduler = Executors.newSingleThreadScheduledExecutor(
+                new ThreadFactoryBuilder().setNameFormat('scheduler-%d').build())
         String photoRootDir = JOptionPane.showInputDialog("Enter path to photo dir")
         def photoLister = new FileSystemPhotoLister(photoRootDir)
-        def photoContentLoader = new FileSystemPhotoContentLoader(photoRootDir)
-        controller = new PhotosController(photoLister, photoContentLoader)
+        photoContentLoader = new FileSystemPhotoContentLoader(photoRootDir)
+        controller = new PhotosController(photoLister)
 
         def frameStateConfigFilePath = Paths.get(frameStatePath)
         final List<PersistentFrameState> frameStates

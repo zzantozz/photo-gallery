@@ -1,7 +1,5 @@
 package rds.photogallery;
 
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -23,9 +21,28 @@ public class PhotoPanel extends JPanel {
     }
 
     public void setPhoto(CompletePhoto photo) {
+        if (!this.isVisible()) {
+            System.out.println("You wasted your time getting here!");
+        }
         this.photo = photo;
     }
 
+    public CompletePhoto getPhotoOnDisplay() {
+        return photo;
+    }
+
+    /**
+     * Returns true if this panel's currently visible photo is sized correctly for the panel.
+     */
+    public boolean imageFitsPanel() {
+        BufferedImage image = photo.getImage();
+        int imageWidth = image.getWidth();
+        int myWidth = this.getWidth();
+        int imageHeight = image.getHeight();
+        int myHeight = this.getHeight();
+        return (imageWidth == myWidth && imageHeight <= myHeight) ||
+                (imageHeight == myHeight && imageWidth <= myWidth);
+    }
     @Override
     public void paint(Graphics g) {
         if (photo == null) {
@@ -41,25 +58,27 @@ public class PhotoPanel extends JPanel {
             // the frame layout is being modified, panels can be a different size than their image until a new one is
             // given to them. If the image fits, draw it. If not, scale it right here to fit the panel. It'll be lower
             // quality, but at least it fits visually until a new image can be delivered.
-            if (
-                    (image.getWidth() == this.getWidth() && image.getHeight() <= this.getHeight()) ||
-                            (image.getHeight() == this.getHeight() && image.getWidth() <= this.getWidth())) {
+            if (imageFitsPanel()) {
                 // Image was scaled to this panel, so just draw it
                 Point centerPosition = findCenterPosition(new Dimension(image.getWidth(null), image.getHeight(null)), this.getSize());
                 backBufferGraphics.drawImage(image, centerPosition.x, centerPosition.y, null);
             } else {
                 // Image is wrong size for this panel, so let the controller know, and scale it to match.
                 App.getInstance().getController().panelImageSizeIsWrong(this, photo);
-                double imageRatio = (double) image.getWidth() / image.getHeight();
-                double panelRatio = (double) this.getWidth() / this.getHeight();
+                int imageWidth = image.getWidth();
+                int myWidth = this.getWidth();
+                int imageHeight = image.getHeight();
+                int myHeight = this.getHeight();
+                double imageRatio = (double) imageWidth / imageHeight;
+                double panelRatio = (double) myWidth / myHeight;
                 final int newWidth;
                 final int newHeight;
                 if (imageRatio > panelRatio) {
-                    newWidth = this.getWidth();
-                    newHeight = (int) (image.getHeight() * ((double) newWidth / image.getWidth()));
+                    newWidth = myWidth;
+                    newHeight = (int) (imageHeight * ((double) newWidth / imageWidth));
                 } else {
-                    newHeight = this.getHeight();
-                    newWidth = (int) (image.getWidth() * ((double) newHeight / image.getHeight()));
+                    newHeight = myHeight;
+                    newWidth = (int) (imageWidth * ((double) newHeight / imageHeight));
                 }
                 Point centerPosition = findCenterPosition(new Dimension(newWidth, newHeight), this.getSize());
                 backBufferGraphics.drawImage(image, centerPosition.x, centerPosition.y, newWidth, newHeight, null);
@@ -86,10 +105,6 @@ public class PhotoPanel extends JPanel {
 
     public void refresh() {
         repaint();
-    }
-
-    public CompletePhoto getPhoto() {
-        return photo;
     }
 
     @Override
