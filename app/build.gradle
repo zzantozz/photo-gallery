@@ -29,7 +29,7 @@ dependencies {
     // For building the IDEA-generated PhotoFrame code
     implementation 'com.intellij:forms_rt:7.0.3'
     // for marshalling configs because JsonBuilder is meh
-    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.13.4'
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.13.4.1'
 
     // Use the awesome Spock testing and specification framework even with Java
     testImplementation 'org.spockframework:spock-core:2.1-groovy-3.0'
