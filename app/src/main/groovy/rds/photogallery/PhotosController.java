@@ -1,5 +1,7 @@
 package rds.photogallery;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.awt.image.BufferedImage;
 import java.util.*;
 import java.util.List;
@@ -8,6 +10,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 public class PhotosController {
+
+    public static final Logger log = LoggerFactory.getLogger(PhotosController.class);
     private PhotoLister photoLister;
     private List<PhotoFrame> photoFrames = new CopyOnWriteArrayList<>();
     private int changeDelayMillis = 1000;
@@ -40,38 +44,38 @@ public class PhotosController {
         }
 
         public void startLoad(PhotoPanel panel, String path) {
-            System.out.println("startLoad");
+            log.info("startLoad");
         }
 
         public void finishLoad(PhotoPanel panel, String path) {
-            System.out.println("finishLoad");
+            log.info("finishLoad");
         }
 
         public void startResize(PhotoPanel panel, String path) {
-            System.out.println("startResize");
+            log.info("startResize");
         }
 
         public void finishResize(PhotoPanel panel, String path) {
-            System.out.println("finishResize");
+            log.info("finishResize");
         }
 
         public void startDeliver(PhotoPanel panel, String path) {
-            System.out.println("startDeliver");
+            log.info("startDeliver");
         }
 
         public void finishDeliver(PhotoPanel panel, String path) {
-            System.out.println("finishDeliver");
+            log.info("finishDeliver");
             // We delivered a photo, but does it match the current state of the panel?
             if (panel.imageFitsPanel()) {
                 this.state = State.IDLE;
             } else {
-                System.out.println("Delivered image isn't a size match, dirtying state!");
+                log.info("Delivered image isn't a size match, dirtying state!");
                 this.state = State.DIRTY;
             }
         }
 
         public void failure(PhotoPanel panel, String path, Exception e) {
-            System.out.println("failure");
+            log.info("failure");
             e.printStackTrace();
             this.state = State.FAILED;
         }
@@ -126,7 +130,7 @@ public class PhotosController {
                 for (PhotoPanelState state : photoPanelStates.values()) {
                     if (!state.isSettled()) {
                         if (compareStateToReality(state)) {
-                            System.out.println("Scheduled work");
+                            log.info("Scheduled work");
                         }
                     }
                 }
@@ -140,7 +144,7 @@ public class PhotosController {
         final PhotoPanel panel = state.photoPanel;
         if (state.activeLoaders.get() > 1) {
             // Just sanity checking here. If I forget code somewhere else, this will show up.
-            System.out.println("OOPS! More than one loader running for " + state);
+            log.info("OOPS! More than one loader running for " + state);
         }
         if (state.activeLoaders.get() > 0) {
             // Already loading for this panel/state. Don't queue up double work.
@@ -154,17 +158,17 @@ public class PhotosController {
                         App.getInstance().getPhotoContentLoader().load(pathToLoad));
                 state.finishLoad(panel, pathToLoad);
                 if (!pathToLoad.equals(state.assignedPhotoPath)) {
-                    System.out.println("Discarding loaded photo because it's no longer assigned to the panel");
+                    log.info("Discarding loaded photo because it's no longer assigned to the panel");
                     return;
                 }
                 final CompletePhoto photoOnDisplay = panel.getPhotoOnDisplay();
                 if (photoOnDisplay != null && pathToLoad.equals(photoOnDisplay.getRelativePath()) &&
                         panel.imageFitsPanel()) {
-                    System.out.println("Discarding loaded photo because the panel already has it");
+                    log.info("Discarding loaded photo because the panel already has it");
                     return;
                 }
                 Function<Object[], Void> logger = objects -> {
-                    System.out.println("log this: " + Arrays.toString(objects));
+                    log.info("log this: " + Arrays.toString(objects));
                     return null;
                 };
                 state.startResize(panel, pathToLoad);
@@ -173,13 +177,13 @@ public class PhotosController {
                 state.finishResize(panel, pathToLoad);
                 // Check all our return conditions again!
                 if (!pathToLoad.equals(state.assignedPhotoPath)) {
-                    System.out.println("Discarding resized photo because it's no longer assigned to the panel");
+                    log.info("Discarding resized photo because it's no longer assigned to the panel");
                     return;
                 }
                 final CompletePhoto photoOnDisplay2 = panel.getPhotoOnDisplay();
                 if (photoOnDisplay2 != null && pathToLoad.equals(photoOnDisplay2.getRelativePath()) &&
                         panel.imageFitsPanel()) {
-                    System.out.println("Discarding resized photo because the panel already has it");
+                    log.info("Discarding resized photo because the panel already has it");
                     return;
                 }
                 state.startDeliver(panel, pathToLoad);
@@ -212,7 +216,7 @@ public class PhotosController {
         // for "a while", then assign it a new photo.
         long aWhileAgo = System.currentTimeMillis() - 2500;
         if (oldestState.activeLoaders.get() == 0 && oldestState.isSettled() && oldestState.photoDelivered < aWhileAgo) {
-            System.out.println("Auto changing photo on " + oldestState.photoPanel);
+            log.info("Auto changing photo on " + oldestState.photoPanel);
             oldestState.assignPhotoPath(photoLister.next());
         }
     }

@@ -1,5 +1,8 @@
 package rds.photogallery;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -13,6 +16,7 @@ import java.awt.image.BufferedImage;
  * to object.getX() if it exists, and I don't want to risk losing precision.
  */
 public class PhotoPanel extends JPanel {
+    public static final Logger log = LoggerFactory.getLogger(PhotoPanel.class);
     private final String name;
     private CompletePhoto photo;
 
@@ -22,7 +26,7 @@ public class PhotoPanel extends JPanel {
 
     public void setPhoto(CompletePhoto photo) {
         if (!this.isVisible()) {
-            System.out.println("You wasted your time getting here!");
+            log.info("You wasted your time getting here!");
         }
         this.photo = photo;
     }
