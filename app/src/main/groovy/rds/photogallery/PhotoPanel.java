@@ -50,7 +50,6 @@ public class PhotoPanel extends JPanel {
     @Override
     public void paint(Graphics g) {
         if (photo == null) {
-            App.getInstance().getController().panelHasNoImage(this);
             return;
         }
         Metrics.time("paint photo panel", () -> {

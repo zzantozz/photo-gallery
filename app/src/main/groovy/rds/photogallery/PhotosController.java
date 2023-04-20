@@ -244,8 +244,4 @@ public class PhotosController {
     public void panelImageSizeIsWrong(PhotoPanel photoPanel, CompletePhoto photo) {
         photoPanelStates.get(photoPanel).setNeedsRefresh();
     }
-
-    public void panelHasNoImage(PhotoPanel photoPanel) {
-        // ignore because the state knows what belongs there, and it'll get it there
-    }
 }
