@@ -1,6 +1,7 @@
 package rds.photogallery
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 
 import javax.swing.JOptionPane
@@ -111,7 +112,7 @@ class App {
     def shutDown() {
         generalWorkPool.shutdown()
         scheduler.shutdown()
-        List<PersistentFrameState> frameStates
+        final List<PersistentFrameState> frameStates
         if (photoFrames.isEmpty()) {
             if (lastFrameState == null) {
                 throw new IllegalStateException('Reached shutdown with no frames and no "last frame state"!')
@@ -121,7 +122,8 @@ class App {
             frameStates = photoFrames.collect { it.frameState }
         }
         def mapper = new ObjectMapper()
-        def frameStatesString = mapper.writeValueAsString(frameStates)
+        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        def frameStatesString = mapper.writeValueAsString(frameStates) + '\n'
         Files.write(Paths.get(frameStatePath), frameStatesString.bytes)
     }
 }
