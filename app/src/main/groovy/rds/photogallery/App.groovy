@@ -3,13 +3,15 @@ package rds.photogallery
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import org.sqlite.SQLiteConfig
+import org.sqlite.SQLiteDataSource
 
+import javax.sql.DataSource
 import javax.swing.JOptionPane
 import java.awt.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.sql.DriverManager
 import java.util.List
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -29,6 +31,7 @@ class App {
     ExecutorService generalWorkPool
     ScheduledExecutorService scheduler
     PersistentFrameState lastFrameState
+    DataSource sqliteDataSource
 
     // App settings with reasonable defaults; eventually to be persisted to a file.
     Settings settings = new Settings([
@@ -92,17 +95,27 @@ class App {
         sleep(3000)
 
         // Now that the quick version is up and running, we do the heavy lifting to get all the features loaded.
+        sqliteDataSource = new SQLiteDataSource()
+        sqliteDataSource.setUrl('jdbc:sqlite:photos.sqlite')
+        // A couple of settings to drastically increase speed at the expense of possible data loss, but this is an
+        // ephemeral database that's built on demand.
+        sqliteDataSource.setSynchronous(SQLiteConfig.SynchronousMode.OFF.toString())
+        sqliteDataSource.setJournalMode(SQLiteConfig.JournalMode.WAL.toString())
+        buildRatingsDb()
+        controller.switchRotation(new SqliteRatingsBasedPhotoRotation())
+    }
 
+    /**
+     * Builds a sqlite db consisting of all photos found in the selected root dir, enriched with metadata from the local
+     * photo data source, if any. This db serves as the mechanism for selecting a random photo of a given rating that
+     * hasn't yet been displayed.
+     */
+    private void buildRatingsDb() {
         def photoDataSource = DataSourceLoader.loadLocalData(
                 new File(settings.photoDataFile), { true }, new File(settings.photoRootDir))
-
         def listerForDb = new FileSystemPhotoLister(settings.photoRootDir)
-        def connection = DriverManager.getConnection('jdbc:sqlite:photos.sqlite')
+        def connection = sqliteDataSource.getConnection()
         def initDbStmt = connection.createStatement()
-        initDbStmt.execute('PRAGMA synchronous = OFF')
-        // This should speed things up more, but I keep getting SQLITE_BUSY on the first insert attempt
-        // initDbStmt.execute('PRAGMA journal_mode = WAL')
-
         // dump the data before re-populating. just a temporary measure, i think.
         // maybe i can find a way to reuse the data in the future?
         initDbStmt.execute('drop table if exists photos')
@@ -113,7 +126,6 @@ class App {
                 'cycle text not null' +
                 ')'
         )
-
         def insertSql = 'insert into photos (relative_path, rating, cycle) values (?, ?, ?)'
         def insertStmt = connection.prepareStatement(insertSql)
         int batchCount = 0
@@ -137,42 +149,6 @@ class App {
         })
         insertStmt.close()
         connection.close()
-
-        def frequencies = [(-999): 3, (0): 1, (1): 2, (2): 4, (3): 8, (4): 16, (5): 32]
-        def flatFreqList = frequencies.collectMany { Collections.nCopies(it.value, it.key) }
-        def totalFreqs = flatFreqList.size()
-        def rand = new Random()
-        def currentCycleByRating = frequencies.collectEntries { [it.key, 'A'] }
-        def nextPhotoProducer = {
-            def rating = flatFreqList[rand.nextInt(totalFreqs)]
-            def cycleName = currentCycleByRating[rating]
-            def conn = DriverManager.getConnection('jdbc:sqlite:photos.sqlite')
-            def findPhotoSql = 'select relative_path from photos where rating = ? and cycle != ? order by random() limit 1'
-            def findPhotoStmt = conn.prepareStatement(findPhotoSql)
-            findPhotoStmt.setInt(1, rating)
-            findPhotoStmt.setString(2, cycleName)
-            def resultSet = findPhotoStmt.executeQuery()
-            final String result
-            if (resultSet.next()) {
-                result = resultSet.getString('relative_path')
-            } else {
-                // Either we've cycled all photos in this rating, or there are zero photos with this rating.
-                def nextCycle = cycleName == 'A' ? 'B' : 'A'
-                currentCycleByRating[rating] = nextCycle
-                def updateCycleSql = 'update photos set cycle = ? where rating = ?'
-                def updateCycleStmt = conn.prepareStatement(updateCycleSql)
-                updateCycleStmt.setString(1, nextCycle)
-                updateCycleStmt.setInt(2, rating)
-                updateCycleStmt.execute()
-                updateCycleStmt.close()
-                result = 'FAKE_PHOTO_PATH_AT_END_OF_CYCLE'
-            }
-            resultSet.close()
-            findPhotoStmt.close()
-            conn.close()
-            result
-        }
-        controller.switchRotation(nextPhotoProducer as PhotoRotation)
     }
 
     /**
