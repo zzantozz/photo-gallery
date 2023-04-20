@@ -9,6 +9,11 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
+/**
+ * Manages all the photos that are being shown and should be shown. It manages a set of photo frames, including all the
+ * panels on those frames. It keeps track of the desired state of all its panels and knows how to get panels to that
+ * state.
+ */
 public class PhotosController {
 
     public static final Logger log = LoggerFactory.getLogger(PhotosController.class);
@@ -119,7 +124,11 @@ public class PhotosController {
     }
 
     public void start() {
+        // TODO: I really hate scheduling photo changes like this. It should be more of a discrete timer that's reset by
+        // any photo changing anywhere, so that things like manually advancing or delayed loading cause photo changes to
+        // be properly spaced out.
         App.getInstance().scheduleWithFixedDelay(this::next, 0, changeDelayMillis, TimeUnit.MILLISECONDS);
+        // TODO: I really don't like this imperative way of populating panels, either. It should be more reactive as well.
         App.getInstance().scheduleWithFixedDelay(submitNeeds(), 0, 100, TimeUnit.MILLISECONDS);
     }
 
@@ -201,6 +210,7 @@ public class PhotosController {
         App.getInstance().submitGeneralWork(fullfillTheNeed);
         return true;
     }
+
     public void next() {
         if (photoPanelStates.isEmpty()) {
             return;

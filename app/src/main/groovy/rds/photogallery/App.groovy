@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class App {
 
+    // Keeps track of frames, just so we can know when the last frame is closed and stop the app as a result
     List<PhotoFrame> photoFrames = []
     ExecutorService generalWorkPool
     ScheduledExecutorService scheduler
@@ -64,6 +65,7 @@ class App {
     def start() {
         generalWorkPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 1,
                 new ThreadFactoryBuilder().setNameFormat('general-worker-%d').build())
+        // TODO: Scheduler is bad! It's taking the place of what should be reactive, event driven things!
         scheduler = Executors.newSingleThreadScheduledExecutor(
                 new ThreadFactoryBuilder().setNameFormat('scheduler-%d').build())
         String photoRootDir = JOptionPane.showInputDialog("Enter path to photo dir")
@@ -103,6 +105,9 @@ class App {
         }
     }
 
+    /**
+     * Adds a new frame to the app set to the given frame state.
+     */
     def newPhotoFrame(PersistentFrameState frameState) {
         def newFrame = new PhotoFrame("frame" + frameCount.getAndIncrement(), frameState)
         newFrame.onDispose {
@@ -118,6 +123,10 @@ class App {
         newFrame.show()
     }
 
+    /**
+     * Handles app shutdown. This is typically triggered by someone pressing the "exit" hotkey or by closing the last
+     * frame of the app. It generally takes care of saving current state so it can be restored at the next startup.
+     */
     def shutDown() {
         generalWorkPool.shutdown()
         scheduler.shutdown()
