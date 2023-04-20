@@ -7,6 +7,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder
 import javax.swing.JOptionPane
 import java.awt.*
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.List
 import java.util.concurrent.ExecutorService
@@ -71,12 +72,22 @@ class App {
         controller = new PhotosController(photoLister)
 
         def frameStateConfigFilePath = Paths.get(frameStatePath)
-        final List<PersistentFrameState> frameStates
+        getInitialFrameStates(frameStateConfigFilePath).each {
+            newPhotoFrame(it as PersistentFrameState)
+        }
+        this.controller.start()
+    }
+
+    /**
+     * Gets initial frame states to show. If a file containing previous states is present, it'll oad that. Otherwise, it
+     * creates a single frame in a default state.
+     */
+    private static List<PersistentFrameState> getInitialFrameStates(Path frameStateConfigFilePath) {
         if (Files.exists(frameStateConfigFilePath)) {
             def mapper = new ObjectMapper()
-            frameStates = mapper.readValue(frameStateConfigFilePath.toFile(), List)
+            return mapper.readValue(frameStateConfigFilePath.toFile(), List)
         } else {
-            frameStates = [new PersistentFrameState().with {
+            return [new PersistentFrameState().with {
                 fullScreen = false
                 normalConfig = new FrameConfiguration()
                 fullScreenConfig = new FrameConfiguration().with {
@@ -90,8 +101,6 @@ class App {
                 it
             }]
         }
-        frameStates.each { newPhotoFrame(it as PersistentFrameState) }
-        this.controller.start()
     }
 
     def newPhotoFrame(PersistentFrameState frameState) {
