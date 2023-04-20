@@ -17,7 +17,7 @@ import java.util.function.Function;
 public class PhotosController {
 
     public static final Logger log = LoggerFactory.getLogger(PhotosController.class);
-    private PhotoLister photoLister;
+    private PhotoRotation photoRotation;
     private List<PhotoFrame> photoFrames = new CopyOnWriteArrayList<>();
     private int changeDelayMillis = 1000;
     // States of tracked panels, used to manage photo changes, resizes, and so on
@@ -90,8 +90,12 @@ public class PhotosController {
         }
     }
 
-    public PhotosController(PhotoLister photoLister) {
-        this.photoLister = photoLister;
+    public PhotosController(PhotoRotation photoRotation) {
+        this.photoRotation = photoRotation;
+    }
+
+    public void switchRotation(PhotoRotation photoRotation) {
+        this.photoRotation = photoRotation;
     }
 
     public void adopt(PhotoFrame photoFrame) {
@@ -110,7 +114,7 @@ public class PhotosController {
 
     private void managePanels(Collection<PhotoPanel> panels) {
         for (PhotoPanel panel : panels) {
-            PhotoPanelState state = new PhotoPanelState(panel, photoLister.next());
+            PhotoPanelState state = new PhotoPanelState(panel, photoRotation.next());
             photoPanelStates.put(panel, state);
         }
     }
@@ -227,7 +231,7 @@ public class PhotosController {
         long aWhileAgo = System.currentTimeMillis() - 2500;
         if (oldestState.activeLoaders.get() == 0 && oldestState.isSettled() && oldestState.photoDelivered < aWhileAgo) {
             log.info("Auto changing photo on " + oldestState.photoPanel);
-            oldestState.assignPhotoPath(photoLister.next());
+            oldestState.assignPhotoPath(photoRotation.next());
         }
     }
 

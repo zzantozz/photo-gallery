@@ -9,6 +9,7 @@ import java.awt.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.sql.DriverManager
 import java.util.List
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -28,7 +29,12 @@ class App {
     ExecutorService generalWorkPool
     ScheduledExecutorService scheduler
     PersistentFrameState lastFrameState
-    String frameStatePath = 'frame-state.json'
+
+    // App settings with reasonable defaults; eventually to be persisted to a file.
+    Settings settings = new Settings([
+            photoDataFile : 'photo-db.txt',
+            frameStateFile: 'frame-state.json',
+    ])
 
     PhotoContentLoader photoContentLoader
     PhotosController controller
@@ -63,21 +69,110 @@ class App {
     }
 
     def start() {
+        // First, do a quick start to get something on the screen. This should be as fast as possible. Leave out any
+        // unnecessary steps.
         generalWorkPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 1,
                 new ThreadFactoryBuilder().setNameFormat('general-worker-%d').build())
         // TODO: Scheduler is bad! It's taking the place of what should be reactive, event driven things!
         scheduler = Executors.newSingleThreadScheduledExecutor(
                 new ThreadFactoryBuilder().setNameFormat('scheduler-%d').build())
-        String photoRootDir = JOptionPane.showInputDialog("Enter path to photo dir")
-        def photoLister = new FileSystemPhotoLister(photoRootDir)
-        photoContentLoader = new FileSystemPhotoContentLoader(photoRootDir)
-        controller = new PhotosController(photoLister)
+        settings.photoRootDir = JOptionPane.showInputDialog("Enter path to photo dir")
+        def photoRotation = new FileSystemPhotoRotation(settings.photoRootDir)
+        photoContentLoader = new FileSystemPhotoContentLoader(settings.photoRootDir)
+        controller = new PhotosController(photoRotation)
 
-        def frameStateConfigFilePath = Paths.get(frameStatePath)
+        def frameStateConfigFilePath = Paths.get(settings.frameStateFile)
         getInitialFrameStates(frameStateConfigFilePath).each {
             newPhotoFrame(it as PersistentFrameState)
         }
         this.controller.start()
+
+        // TODO: sleeping a while lets initial photos load, but this next bit is still really resource intensive.
+        // need to find a way to deconflict from the app that's already visible.
+        sleep(3000)
+
+        // Now that the quick version is up and running, we do the heavy lifting to get all the features loaded.
+
+        def photoDataSource = DataSourceLoader.loadLocalData(
+                new File(settings.photoDataFile), { true }, new File(settings.photoRootDir))
+
+        def listerForDb = new FileSystemPhotoLister(settings.photoRootDir)
+        def connection = DriverManager.getConnection('jdbc:sqlite:photos.sqlite')
+        def initDbStmt = connection.createStatement()
+        initDbStmt.execute('PRAGMA synchronous = OFF')
+        // This should speed things up more, but I keep getting SQLITE_BUSY on the first insert attempt
+        // initDbStmt.execute('PRAGMA journal_mode = WAL')
+
+        // dump the data before re-populating. just a temporary measure, i think.
+        // maybe i can find a way to reuse the data in the future?
+        initDbStmt.execute('drop table if exists photos')
+        initDbStmt.execute('create table main.photos(' +
+                'pk serial primary key,' +
+                'relative_path text not null,' +
+                'rating integer not null,' +
+                'cycle text not null' +
+                ')'
+        )
+
+        def insertSql = 'insert into photos (relative_path, rating, cycle) values (?, ?, ?)'
+        def insertStmt = connection.prepareStatement(insertSql)
+        int batchCount = 0
+        Metrics.time('insert all rows to db', {
+            while (listerForDb.hasNext()) {
+                def photoPath = listerForDb.next()
+                def photoData = photoDataSource.getPhotoData(photoPath)
+                insertStmt.setString(1, photoPath)
+                insertStmt.setInt(2, photoData.rating)
+                insertStmt.setString(3, 'none yet')
+                insertStmt.addBatch()
+                if (++batchCount >= 100) {
+                    batchCount = 0
+                    insertStmt.executeBatch()
+                    // TODO: get rid of this if there's a better way to free up resources
+                    sleep(50)
+                }
+            }
+            // Make sure to insert any final things that didn't make up a full batch
+            insertStmt.executeBatch()
+        })
+        insertStmt.close()
+        connection.close()
+
+        def frequencies = [(-999): 3, (0): 1, (1): 2, (2): 4, (3): 8, (4): 16, (5): 32]
+        def flatFreqList = frequencies.collectMany { Collections.nCopies(it.value, it.key) }
+        def totalFreqs = flatFreqList.size()
+        def rand = new Random()
+        def currentCycleByRating = frequencies.collectEntries { [it.key, 'A'] }
+        def nextPhotoProducer = {
+            def rating = flatFreqList[rand.nextInt(totalFreqs)]
+            def cycleName = currentCycleByRating[rating]
+            def conn = DriverManager.getConnection('jdbc:sqlite:photos.sqlite')
+            def findPhotoSql = 'select relative_path from photos where rating = ? and cycle != ? order by random() limit 1'
+            def findPhotoStmt = conn.prepareStatement(findPhotoSql)
+            findPhotoStmt.setInt(1, rating)
+            findPhotoStmt.setString(2, cycleName)
+            def resultSet = findPhotoStmt.executeQuery()
+            final String result
+            if (resultSet.next()) {
+                result = resultSet.getString('relative_path')
+            } else {
+                // Either we've cycled all photos in this rating, or there are zero photos with this rating.
+                def nextCycle = cycleName == 'A' ? 'B' : 'A'
+                currentCycleByRating[rating] = nextCycle
+                def updateCycleSql = 'update photos set cycle = ? where rating = ?'
+                def updateCycleStmt = conn.prepareStatement(updateCycleSql)
+                updateCycleStmt.setString(1, nextCycle)
+                updateCycleStmt.setInt(2, rating)
+                updateCycleStmt.execute()
+                updateCycleStmt.close()
+                result = 'FAKE_PHOTO_PATH_AT_END_OF_CYCLE'
+            }
+            resultSet.close()
+            findPhotoStmt.close()
+            conn.close()
+            result
+        }
+        controller.switchRotation(nextPhotoProducer as PhotoRotation)
     }
 
     /**
@@ -142,6 +237,10 @@ class App {
         def mapper = new ObjectMapper()
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
         def frameStatesString = mapper.writeValueAsString(frameStates) + '\n'
-        Files.write(Paths.get(frameStatePath), frameStatesString.bytes)
+        Files.write(Paths.get(settings.frameStateFile), frameStatesString.bytes)
+    }
+
+    File resolvePhotoPath(String photoPath) {
+        new File(settings.photoRootDir, photoPath)
     }
 }

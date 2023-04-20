@@ -15,20 +15,24 @@ class FileSystemPhotoLister implements PhotoLister {
     }
 
     @Override
+    boolean hasNext() {
+        fileIterator.hasNext();
+    }
+
+    @Override
     String next() {
-        if (!fileIterator.hasNext()) {
-            fileIterator = getIterator()
-        }
         fileIterator.next()
     }
 
     private Iterator<Path> getIterator() {
+        def rootPath = Paths.get(rootDir)
         this.fileIterator = Metrics.timeAndReturn("getting photo iterator from file system", {
             Files.walk(Paths.get(rootDir))
                     .filter(Files::isRegularFile)
                     .filter((f) -> photoFileExtensions.any {
                         f.fileName.toString().toLowerCase().endsWith(it)
                     })
+                    .map(rootPath::relativize)
                     .iterator()
         })
         fileIterator
