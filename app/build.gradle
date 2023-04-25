@@ -55,6 +55,14 @@ application {
     mainClass = 'rds.photogallery.App'
 }
 
+distTar {
+    into(project.name) {
+        from '.'
+        include 'docker/**'
+        include 'bin/*'
+    }
+}
+
 tasks.named('test') {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
