@@ -44,6 +44,7 @@ public class PhotosController {
         State state;
         final PhotoPanel photoPanel;
         String assignedPhotoPath;
+        int failureCount;
         long photoAssigned;
         long photoDelivered;
         AtomicInteger activeLoaders = new AtomicInteger();
@@ -111,6 +112,7 @@ public class PhotosController {
 
         public void failure(PhotoPanel panel, String path, Exception e) {
             log.info("failure");
+            failureCount++;
             e.printStackTrace();
             this.state = State.FAILED;
         }
@@ -225,6 +227,24 @@ public class PhotosController {
         }
         if (state.activeLoaders.get() > 0) {
             // Already loading for this panel/state. Don't queue up double work.
+            return false;
+        }
+        if (state.failureCount > 10) {
+            // Bail on this one. Give it a default, broken image so that loading and the photo rotation can go on
+            state.failureCount = 0;
+            int width = panel.getWidth();
+            int height = panel.getHeight();
+            BufferedImage brokenImage = panel.getGraphicsConfiguration().createCompatibleImage(width, height);
+            Graphics g = brokenImage.getGraphics();
+            g.setColor(Color.BLACK);
+            g.fillRect(0, 0, width, height);
+            g.setColor(Color.RED);
+            g.drawString("Failed to load: " + pathToLoad, 10, 10);
+            g.dispose();
+            state.startDeliver(panel, pathToLoad);
+            panel.setPhoto(new CompletePhoto("BROKEN_IMAGE", brokenImage));
+            panel.refresh();
+            state.finishDeliver(panel, pathToLoad);
             return false;
         }
         state.activeLoaders.incrementAndGet();
