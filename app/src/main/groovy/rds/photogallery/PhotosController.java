@@ -56,6 +56,14 @@ public class PhotosController {
             log.info("finishLoad");
         }
 
+        public void startRotate(PhotoPanel panel, String path) {
+            log.info("startRotate");
+        }
+
+        public void finishRotate(PhotoPanel panel, String path) {
+            log.info("finishRotate");
+        }
+
         public void startResize(PhotoPanel panel, String path) {
             log.info("startResize");
         }

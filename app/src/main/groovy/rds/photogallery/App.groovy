@@ -91,7 +91,7 @@ class App {
         rootDir = JOptionPane.showInputDialog("Enter path to photo dir")
         settings.setString(Settings.Setting.PHOTO_DATA_FILE, rootDir + '/photo-db.txt')
         settings.setString(Settings.Setting.PHOTO_ROOT_DIR, rootDir)
-        def photoRotation = new FileSystemPhotoRotation(rootDir)
+        def photoRotation = new RandomDirWalkPhotoRotation(Paths.get(rootDir))
         photoContentLoader = new FileSystemPhotoContentLoader(rootDir)
         controller = new PhotosController(photoRotation)
 
