@@ -40,6 +40,8 @@ dependencies {
     implementation 'org.jolokia:jolokia-jvm:1.6.2:agent'
     implementation 'io.micrometer:micrometer-registry-graphite:1.7.5'
     implementation 'io.micrometer:micrometer-registry-opentsdb:1.8.0'
+    // photo rotation
+    implementation 'com.github.mike10004:commons-imaging:1.0a1'
     // For working with filenames
     implementation 'commons-io:commons-io:1.4'
     // For hashing

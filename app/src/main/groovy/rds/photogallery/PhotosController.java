@@ -63,6 +63,11 @@ public class PhotosController {
             return state == State.IDLE;
         }
 
+        public void forceSettle(String reason) {
+            log.info("Forcing panel " + photoPanel + " to settle because: " + reason);
+            this.state = State.IDLE;
+        }
+
         public void startLoad(PhotoPanel panel, String path) {
             log.info("startLoad");
         }
@@ -230,16 +235,19 @@ public class PhotosController {
                 final CompletePhoto rawPhoto = App.metrics().timeAndReturn("load photo", () ->
                         App.getInstance().getPhotoContentLoader().load(pathToLoad));
                 state.finishLoad(panel, pathToLoad);
-                if (!pathToLoad.equals(state.assignedPhotoPath)) {
-                    log.info("Discarding loaded photo because it's no longer assigned to the panel");
+                if (shouldStopFulfillment(pathToLoad, state, panel)) {
                     return;
                 }
-                final CompletePhoto photoOnDisplay = panel.getPhotoOnDisplay();
-                if (photoOnDisplay != null && pathToLoad.equals(photoOnDisplay.getRelativePath()) &&
-                        panel.imageFitsPanel()) {
-                    log.info("Discarding loaded photo because the panel already has it");
+                // rotate stage
+                state.startRotate(panel, pathToLoad);
+                BufferedImage rotatedImage = App.metrics().timeAndReturn("rotate photo", () ->
+                        rotateToOrientation(rawPhoto.getImage(), pathToLoad));
+                state.finishRotate(panel, pathToLoad);
+                if (shouldStopFulfillment(pathToLoad, state, panel)) {
                     return;
                 }
+                // resize stage
+                CompletePhoto rotatedPhoto = new CompletePhoto(pathToLoad, rotatedImage);
                 Function<Object[], Void> logger = objects -> {
                     log.info("log this: " + Arrays.toString(objects));
                     return null;
@@ -248,15 +256,7 @@ public class PhotosController {
                 final BufferedImage resized = App.metrics().timeAndReturn("resize photo", () ->
                         PhotoTools.resizeImage(rotatedPhoto.getImage(), panel.getSize(), logger));
                 state.finishResize(panel, pathToLoad);
-                // Check all our return conditions again!
-                if (!pathToLoad.equals(state.assignedPhotoPath)) {
-                    log.info("Discarding resized photo because it's no longer assigned to the panel");
-                    return;
-                }
-                final CompletePhoto photoOnDisplay2 = panel.getPhotoOnDisplay();
-                if (photoOnDisplay2 != null && pathToLoad.equals(photoOnDisplay2.getRelativePath()) &&
-                        panel.imageFitsPanel()) {
-                    log.info("Discarding resized photo because the panel already has it");
+                if (shouldStopFulfillment(pathToLoad, state, panel)) {
                     return;
                 }
                 // deliver stage
@@ -274,6 +274,55 @@ public class PhotosController {
         App.getInstance().submitGeneralWork(fullfillTheNeed);
         return true;
     }
+
+    private boolean shouldStopFulfillment(String pathToLoad, PhotoPanelState state, PhotoPanel panel) {
+        boolean result = false;
+        if (!pathToLoad.equals(state.assignedPhotoPath)) {
+            log.info("Discarding in-process photo because it's no longer assigned to the panel");
+            result = true;
+        }
+        final CompletePhoto photoOnDisplay = panel.getPhotoOnDisplay();
+        if (photoOnDisplay != null && pathToLoad.equals(photoOnDisplay.getRelativePath()) &&
+                panel.imageFitsPanel()) {
+            log.info("Discarding in-process photo because the panel already has it");
+            result = true;
+        }
+        if (result) {
+            state.forceSettle("stopped fulfilling a need");
+        }
+        return result;
+    }
+
+    private BufferedImage rotateToOrientation(BufferedImage image, String relativePath) {
+        try {
+            // TODO: requires local files
+            File imageFile = App.resolvePath(relativePath);
+            ImageMetadata metadata1 = Imaging.getMetadata(imageFile);
+            // A GIF doesn't return any metadata
+            if (metadata1 == null) return image;
+            // A PNG seems to give a GenericImageMetadata, which I don't think I can work with
+            if (!(metadata1 instanceof JpegImageMetadata)) return image;
+            JpegImageMetadata metadata = (JpegImageMetadata) metadata1;
+            TiffField rotationField = metadata.findEXIFValue(TiffTagConstants.TIFF_TAG_ORIENTATION);
+            if (rotationField == null) return image;
+            int rotation = rotationField.getIntValue();
+            switch (rotation) {
+                case 1:
+                    return image;
+                case 8:
+                    return Scalr.rotate(image, Scalr.Rotation.CW_270, Scalr.OP_ANTIALIAS);
+                case 3:
+                    return Scalr.rotate(image, Scalr.Rotation.CW_180, Scalr.OP_ANTIALIAS);
+                case 6:
+                    return Scalr.rotate(image, Scalr.Rotation.CW_90, Scalr.OP_ANTIALIAS);
+                default:
+                    throw new RuntimeException("Unexpected image rotation: " + rotation);
+            }
+        } catch (ImageReadException | IOException e) {
+            throw new RuntimeException("Error reading image file to get metadata - maybe this shouldn't be fatal", e);
+        }
+    }
+
 
     public void next() {
         if (photoPanelStates.isEmpty()) {
