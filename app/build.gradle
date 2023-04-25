@@ -34,8 +34,15 @@ dependencies {
     implementation 'org.slf4j:slf4j-api:2.0.6'
     implementation 'org.apache.logging.log4j:log4j-slf4j2-impl:2.19.0'
     implementation 'org.apache.logging.log4j:log4j-core:2.19.0'
+    // sqlite for cheap photo randomization
     implementation 'org.xerial:sqlite-jdbc:3.41.2.1'
+    // metrics
+    implementation 'org.jolokia:jolokia-jvm:1.6.2:agent'
+    implementation 'io.micrometer:micrometer-registry-graphite:1.7.5'
+    implementation 'io.micrometer:micrometer-registry-opentsdb:1.8.0'
+    // For working with filenames
     implementation 'commons-io:commons-io:1.4'
+    // For hashing
     implementation 'commons-codec:commons-codec:1.4'
 
     // Use the awesome Spock testing and specification framework even with Java

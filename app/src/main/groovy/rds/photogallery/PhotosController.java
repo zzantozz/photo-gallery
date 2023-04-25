@@ -69,9 +69,11 @@ public class PhotosController {
         }
 
         public void finishDeliver(PhotoPanel panel, String path) {
-            log.info("finishDeliver");
+            log.info("Photo delivered for " + panel);
+            photoDelivered = System.currentTimeMillis();
             // We delivered a photo, but does it match the current state of the panel?
             if (panel.imageFitsPanel()) {
+                App.metrics().photoDeliveryTime(System.currentTimeMillis() - photoAssigned);
                 this.state = State.IDLE;
             } else {
                 log.info("Delivered image isn't a size match, dirtying state!");
@@ -139,11 +141,11 @@ public class PhotosController {
     private ThrowableReporting.Runnable submitNeeds() {
         return new ThrowableReporting.Runnable() {
             @Override
-            public void doRun() throws Throwable {
+            public void doRun() {
                 for (PhotoPanelState state : photoPanelStates.values()) {
                     if (!state.isSettled()) {
                         if (compareStateToReality(state)) {
-                            log.info("Scheduled work");
+                            log.info("Scheduled work for " + state.photoPanel);
                         }
                     }
                 }
@@ -166,8 +168,9 @@ public class PhotosController {
         state.activeLoaders.incrementAndGet();
         Runnable fullfillTheNeed = () -> {
             try {
+                // loading stage
                 state.startLoad(panel, pathToLoad);
-                final CompletePhoto photo = Metrics.timeAndReturn("load needed photo", () ->
+                final CompletePhoto rawPhoto = App.metrics().timeAndReturn("load photo", () ->
                         App.getInstance().getPhotoContentLoader().load(pathToLoad));
                 state.finishLoad(panel, pathToLoad);
                 if (!pathToLoad.equals(state.assignedPhotoPath)) {
@@ -185,8 +188,8 @@ public class PhotosController {
                     return null;
                 };
                 state.startResize(panel, pathToLoad);
-                final BufferedImage resized = Metrics.timeAndReturn("resize needed photo", () ->
-                        PhotoTools.resizeImage(photo.getImage(), panel.getSize(), logger));
+                final BufferedImage resized = App.metrics().timeAndReturn("resize photo", () ->
+                        PhotoTools.resizeImage(rotatedPhoto.getImage(), panel.getSize(), logger));
                 state.finishResize(panel, pathToLoad);
                 // Check all our return conditions again!
                 if (!pathToLoad.equals(state.assignedPhotoPath)) {
@@ -199,10 +202,10 @@ public class PhotosController {
                     log.info("Discarding resized photo because the panel already has it");
                     return;
                 }
+                // deliver stage
                 state.startDeliver(panel, pathToLoad);
                 CompletePhoto resizedPhoto = new CompletePhoto(pathToLoad, resized);
                 panel.setPhoto(resizedPhoto);
-                state.photoDelivered = System.currentTimeMillis();
                 panel.refresh();
                 state.finishDeliver(panel, pathToLoad);
             } catch (Exception e) {

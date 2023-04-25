@@ -33,11 +33,10 @@ class App {
     PersistentFrameState lastFrameState
     DataSource sqliteDataSource
 
-    // App settings with reasonable defaults; eventually to be persisted to a file.
-    Settings settings = new Settings([
-            photoDataFile : 'photo-db.txt',
-            frameStateFile: 'frame-state.json',
-    ])
+    Settings settings
+    Metrics metrics
+    // Remember the root dir we're loading photos from, mainly so relative paths can be quickly resolved.
+    String rootDir
 
     PhotoContentLoader photoContentLoader
     PhotosController controller
@@ -51,6 +50,14 @@ class App {
 
     static void main(String[] args) {
         getInstance().start()
+    }
+
+    static Settings settings() {
+        instance.settings
+    }
+
+    static Metrics metrics() {
+        instance.metrics
     }
 
     void submitGeneralWork(Runnable task) {
@@ -72,6 +79,8 @@ class App {
     }
 
     def start() {
+        settings = new Settings()
+        metrics = new Metrics()
         // First, do a quick start to get something on the screen. This should be as fast as possible. Leave out any
         // unnecessary steps.
         generalWorkPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 1,
@@ -79,12 +88,14 @@ class App {
         // TODO: Scheduler is bad! It's taking the place of what should be reactive, event driven things!
         scheduler = Executors.newSingleThreadScheduledExecutor(
                 new ThreadFactoryBuilder().setNameFormat('scheduler-%d').build())
-        settings.photoRootDir = JOptionPane.showInputDialog("Enter path to photo dir")
-        def photoRotation = new FileSystemPhotoRotation(settings.photoRootDir)
-        photoContentLoader = new FileSystemPhotoContentLoader(settings.photoRootDir)
+        rootDir = JOptionPane.showInputDialog("Enter path to photo dir")
+        settings.setString(Settings.Setting.PHOTO_DATA_FILE, rootDir + '/photo-db.txt')
+        settings.setString(Settings.Setting.PHOTO_ROOT_DIR, rootDir)
+        def photoRotation = new FileSystemPhotoRotation(rootDir)
+        photoContentLoader = new FileSystemPhotoContentLoader(rootDir)
         controller = new PhotosController(photoRotation)
 
-        def frameStateConfigFilePath = Paths.get(settings.frameStateFile)
+        def frameStateConfigFilePath = Paths.get(settings.asString(Settings.Setting.FRAME_STATE_FILE))
         getInitialFrameStates(frameStateConfigFilePath).each {
             newPhotoFrame(it as PersistentFrameState)
         }
@@ -112,8 +123,10 @@ class App {
      */
     private void buildRatingsDb() {
         def photoDataSource = DataSourceLoader.loadLocalData(
-                new File(settings.photoDataFile), { true }, new File(settings.photoRootDir))
-        def listerForDb = new FileSystemPhotoLister(settings.photoRootDir)
+                new File(settings.asString(Settings.Setting.PHOTO_DATA_FILE)),
+                { true },
+                new File(rootDir))
+        def listerForDb = new FileSystemPhotoLister(rootDir)
         def connection = sqliteDataSource.getConnection()
         def initDbStmt = connection.createStatement()
         // dump the data before re-populating. just a temporary measure, i think.
@@ -129,7 +142,7 @@ class App {
         def insertSql = 'insert into photos (relative_path, rating, cycle) values (?, ?, ?)'
         def insertStmt = connection.prepareStatement(insertSql)
         int batchCount = 0
-        Metrics.time('insert all rows to db', {
+        metrics.time('insert all rows to db', {
             while (listerForDb.hasNext()) {
                 def photoPath = listerForDb.next()
                 def photoData = photoDataSource.getPhotoData(photoPath)
@@ -213,10 +226,10 @@ class App {
         def mapper = new ObjectMapper()
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
         def frameStatesString = mapper.writeValueAsString(frameStates) + '\n'
-        Files.write(Paths.get(settings.frameStateFile), frameStatesString.bytes)
+        Files.write(Paths.get(settings.asString(Settings.Setting.FRAME_STATE_FILE)), frameStatesString.bytes)
     }
 
     File resolvePhotoPath(String photoPath) {
-        new File(settings.photoRootDir, photoPath)
+        new File(rootDir, photoPath)
     }
 }

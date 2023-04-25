@@ -52,7 +52,7 @@ public class PhotoPanel extends JPanel {
         if (photo == null) {
             return;
         }
-        Metrics.time("paint photo panel", () -> {
+        App.metrics().time("paint photo panel", () -> {
             BufferedImage backBuffer = getGraphicsConfiguration().createCompatibleImage(getWidth(), getHeight());
             Graphics backBufferGraphics = backBuffer.getGraphics();
             fillBlack(backBufferGraphics, getBounds());
