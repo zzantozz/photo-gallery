@@ -7,7 +7,7 @@ import java.nio.file.Paths
 class FileSystemPhotoLister implements PhotoLister {
     String rootDir
     Iterator<Path> fileIterator
-    List<String> photoFileExtensions = ['jpg']
+    List<String> photoFileExtensions = ['jpg', 'jpeg', 'png', 'gif']
 
     FileSystemPhotoLister(String rootDir) {
         this.rootDir = rootDir
