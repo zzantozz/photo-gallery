@@ -11,12 +11,8 @@ import io.micrometer.opentsdb.OpenTSDBMeterRegistry
 
 import java.time.Duration
 import java.time.temporal.ChronoUnit
-import java.util.concurrent.TimeUnit
-
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-
 import java.util.concurrent.Callable
+import java.util.concurrent.TimeUnit
 
 /**
  * Records metrics about the app. To start with, it's a simple, dumb implementation that just writes stuff to stdout.

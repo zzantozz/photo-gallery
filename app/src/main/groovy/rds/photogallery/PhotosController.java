@@ -14,8 +14,8 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
@@ -31,10 +31,10 @@ public class PhotosController {
 
     public static final Logger log = LoggerFactory.getLogger(PhotosController.class);
     private PhotoRotation photoRotation;
-    private List<PhotoFrame> photoFrames = new CopyOnWriteArrayList<>();
-    private int changeDelayMillis = 1000;
+    private final List<PhotoFrame> photoFrames = new CopyOnWriteArrayList<>();
+    private static final int changeDelayMillis = 7500;
     // States of tracked panels, used to manage photo changes, resizes, and so on
-    private Map<PhotoPanel, PhotoPanelState> photoPanelStates = new ConcurrentHashMap<>();
+    private final Map<PhotoPanel, PhotoPanelState> photoPanelStates = new ConcurrentHashMap<>();
     private Timer timer;
     private AutoChangeTimerTask autoChangeTimerTask;
 

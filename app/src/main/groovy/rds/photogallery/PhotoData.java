@@ -1,6 +1,5 @@
 package rds.photogallery;
 
-import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
