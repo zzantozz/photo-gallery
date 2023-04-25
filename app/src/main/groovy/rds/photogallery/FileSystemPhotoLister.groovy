@@ -29,8 +29,9 @@ class FileSystemPhotoLister implements PhotoLister {
         this.fileIterator = App.metrics().timeAndReturn("getting photo iterator from file system", {
             Files.walk(Paths.get(rootDir))
                     .filter(Files::isRegularFile)
-                    .filter((f) -> photoFileExtensions.any {
-                        f.fileName.toString().toLowerCase().endsWith(it)
+                    .filter(p -> !App.isRewrite(p))
+                    .filter((p) -> photoFileExtensions.any {
+                        p.fileName.toString().toLowerCase().endsWith(it)
                     })
                     .map(rootPath::relativize)
                     .iterator()

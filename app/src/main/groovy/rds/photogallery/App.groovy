@@ -3,6 +3,9 @@ package rds.photogallery
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import org.apache.commons.io.FilenameUtils
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.sqlite.SQLiteConfig
 import org.sqlite.SQLiteDataSource
 
@@ -26,6 +29,8 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class App {
 
+    private static final Logger log = LoggerFactory.getLogger(App.class)
+
     // Keeps track of frames, just so we can know when the last frame is closed and stop the app as a result
     List<PhotoFrame> photoFrames = []
     ExecutorService generalWorkPool
@@ -43,6 +48,7 @@ class App {
     AtomicInteger frameCount = new AtomicInteger(1)
 
     private static final App INSTANCE = new App()
+    public static final String REWRITE_SUFFIX = '-rewrite'
 
     static App getInstance() {
         INSTANCE
@@ -218,6 +224,65 @@ class App {
                 shutDown()
             }
         });
+    }
+
+    static boolean isRewrite(Path path) {
+        FilenameUtils.removeExtension(path.toString()).endsWith(REWRITE_SUFFIX)
+    }
+
+    String resolvePathWithRewrites(String relativePath) {
+        String dir = FilenameUtils.getFullPath(relativePath)
+        String baseName = FilenameUtils.getBaseName(relativePath)
+        String extension = FilenameUtils.getExtension(relativePath)
+        String comprehensiveWayPath = comprehensiveRewriteCheck(relativePath, dir, baseName)
+        String cheapWayPath = cheapRewriteCheck(relativePath, dir, baseName, extension)
+        if (!cheapWayPath.equals(comprehensiveWayPath)) {
+            log.warn("Found a rewrite inconsistency. Cheap path determined {} but comprehensive path determined {}",
+                    cheapWayPath, comprehensiveWayPath)
+        }
+        return cheapWayPath
+    }
+
+    /**
+     * Looks for rewrites comprehensively, by scanning the whole directory for files with matching base names. This is
+     * the original way but means more file system access, which can be slow when it's a network mount.
+     */
+    String comprehensiveRewriteCheck(String relativePath, String dir, String baseName) {
+        String[] list = new File(rootDir, dir)
+                .list((dir1, name) -> name.startsWith(baseName + REWRITE_SUFFIX))
+        final String pathToLoad
+        if (list == null) {
+            log.warn("Failed to list contents of {}", dir)
+            pathToLoad = relativePath
+        } else if (list.length > 1) {
+            log.warn("Found multiple rewrite files for {}: {}", relativePath, list)
+            pathToLoad = FilenameUtils.concat(dir, list[0])
+        } else if (list.length == 0) {
+            pathToLoad = relativePath
+        } else {
+            pathToLoad = FilenameUtils.concat(dir, list[0])
+        }
+        return pathToLoad
+    }
+
+    /**
+     * Looks for rewrites a cheap way with respect to file system access. Just check for the existence of specific
+     * files. Could miss rewrites with odd naming casing, particularly in the file extension.
+     */
+    String cheapRewriteCheck(String relativePath, String dir, String baseName, String extension) {
+        File searchDir = new File(rootDir, dir)
+        String rewriteName1 = baseName + REWRITE_SUFFIX + "." + extension.toUpperCase()
+        String rewriteName2 = baseName + REWRITE_SUFFIX + "." + extension.toLowerCase()
+        if (new File(searchDir, rewriteName1).exists()) {
+            log.debug("Load {} in place of {}", rewriteName1, relativePath)
+            return FilenameUtils.concat(dir, rewriteName1)
+        } else if (new File(searchDir, rewriteName2).exists()) {
+            log.debug("Load {} in place of {}", rewriteName2, relativePath)
+            return FilenameUtils.concat(dir, rewriteName2)
+        } else {
+            log.debug("Load {}", relativePath)
+            return relativePath
+        }
     }
 
     /**

@@ -24,6 +24,7 @@ public class RandomDirWalkPhotoRotation implements PhotoRotation {
                 history.push(selectedPath);
                 List<Path> entries = Files.list(selectedPath)
                         .filter(p -> Files.isDirectory(p) || isImage(p))
+                        .filter(p -> !App.isRewrite(p))
                         .collect(Collectors.toList());
                 if (entries.isEmpty()) {
                     blackList.add(selectedPath);
