@@ -1,0 +1,30 @@
+version: "3.6"
+services:
+  graphite:
+    image: graphiteapp/graphite-statsd
+    ports:
+      - "80:80"
+      - "2003-2004:2003-2004"
+      - "2023-2024:2023-2024"
+      - "8125:8125/udp"
+      - "8126:8126"
+    healthcheck:
+      test: "curl -f http://localhost || exit 1"
+      timeout: 1s
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/mounts/etc/grafana:/etc/grafana
+  jmx2graphite:
+    image: logzio/jmx2graphite
+    depends_on:
+      - graphite
+    environment:
+      - "JOLOKIA_URL=http://172.17.0.1:7777/jolokia/"
+      - "SERVICE_NAME=jmx"
+      - "GRAPHITE_HOST=graphite"
+      - "GRAPHITE_PORT=2004"
+      - "GRAPHITE_PROTOCOL=pickled"
+      - "LOG_LEVEL=INFO"
