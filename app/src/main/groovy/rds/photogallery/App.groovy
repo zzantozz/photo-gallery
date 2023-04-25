@@ -202,9 +202,22 @@ class App {
                 shutDown()
             }
         }
+        registerGlobalHotKeys(newFrame)
         photoFrames.add(newFrame)
         controller.adopt(newFrame)
         newFrame.show()
+    }
+
+    private void registerGlobalHotKeys(PhotoFrame photoFrame) {
+        photoFrame.addHotKey("ESCAPE", "Quit", (e) -> {
+            controller.pauseAndHideAll()
+            int answer = JOptionPane.showConfirmDialog(null, 'Are you sure?', 'Exit now?', JOptionPane.YES_NO_OPTION)
+            if (answer == JOptionPane.NO_OPTION) {
+                controller.unpauseAndUnhideAll()
+            } else {
+                shutDown()
+            }
+        });
     }
 
     /**
@@ -227,6 +240,7 @@ class App {
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
         def frameStatesString = mapper.writeValueAsString(frameStates) + '\n'
         Files.write(Paths.get(settings.asString(Settings.Setting.FRAME_STATE_FILE)), frameStatesString.bytes)
+        controller.dispose()
     }
 
     File resolvePhotoPath(String photoPath) {

@@ -1,11 +1,24 @@
 package rds.photogallery;
 
+import org.apache.commons.imaging.ImageReadException;
+import org.apache.commons.imaging.Imaging;
+import org.apache.commons.imaging.common.ImageMetadata;
+import org.apache.commons.imaging.formats.jpeg.JpegImageMetadata;
+import org.apache.commons.imaging.formats.tiff.TiffField;
+import org.apache.commons.imaging.formats.tiff.constants.TiffTagConstants;
+import org.imgscalr.Scalr;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
@@ -22,6 +35,8 @@ public class PhotosController {
     private int changeDelayMillis = 1000;
     // States of tracked panels, used to manage photo changes, resizes, and so on
     private Map<PhotoPanel, PhotoPanelState> photoPanelStates = new ConcurrentHashMap<>();
+    private Timer timer;
+    private AutoChangeTimerTask autoChangeTimerTask;
 
     static class PhotoPanelState {
         enum State { INIT, NEW_ASSIGNMENT, IDLE, FAILED, DIRTY }
@@ -138,12 +153,46 @@ public class PhotosController {
     }
 
     public void start() {
-        // TODO: I really hate scheduling photo changes like this. It should be more of a discrete timer that's reset by
-        // any photo changing anywhere, so that things like manually advancing or delayed loading cause photo changes to
-        // be properly spaced out.
-        App.getInstance().scheduleWithFixedDelay(this::next, 0, changeDelayMillis, TimeUnit.MILLISECONDS);
+        timer = new Timer("Photo Changer", true);
+        startAutoChanging();
         // TODO: I really don't like this imperative way of populating panels, either. It should be more reactive as well.
         App.getInstance().scheduleWithFixedDelay(submitNeeds(), 0, 100, TimeUnit.MILLISECONDS);
+    }
+
+    public void startAutoChanging() {
+        autoChangeTimerTask = new AutoChangeTimerTask();
+        timer.schedule(autoChangeTimerTask, changeDelayMillis);
+    }
+
+    public void stopAutoChanging() {
+        if (autoChangeTimerTask == null) {
+            log.warn("Attempt to stop auto-changing when no change is scheduled");
+            return;
+        }
+        autoChangeTimerTask.cancel();
+    }
+
+    private class AutoChangeTimerTask extends TimerTask {
+        @Override
+        public void run() {
+            next();
+            startAutoChanging();
+        }
+    }
+
+    public void pauseAndHideAll() {
+        stopAutoChanging();
+        photoFrames.forEach(PhotoFrame::hide);
+    }
+
+    public void unpauseAndUnhideAll() {
+        photoFrames.forEach(PhotoFrame::show);
+        startAutoChanging();
+    }
+
+    public void dispose() {
+        timer.cancel();
+        photoFrames.forEach(PhotoFrame::dispose);
     }
 
     private ThrowableReporting.Runnable submitNeeds() {

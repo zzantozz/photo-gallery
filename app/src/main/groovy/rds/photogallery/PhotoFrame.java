@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 public class PhotoFrame {
-    private final JFrame theFrame;
+    private JFrame theFrame;
     private GridLayout theFrameLayout;
     private JButton newFrameButton;
     private JButton lessColumnsButton;
@@ -32,12 +32,13 @@ public class PhotoFrame {
     private final PersistentFrameState frameState;
     private final List<Function<PhotoFrame, Void>> disposeListeners = new ArrayList<>();
     private final AtomicInteger panelCount = new AtomicInteger();
+    private final List<HotKey> hotkeys = new ArrayList<>();
 
     public PhotoFrame(String name, PersistentFrameState frameState) {
         this.name = name;
         this.frameState = frameState;
 //        setUpControls(currentFrameConfiguration().getRows(), currentFrameConfiguration().getColumns());
-//        addHotKeys();
+        addHotKeys();
 //        setShowingRatings(currentFrameConfiguration().isShowingRatings());
 //        setShowingNames(currentFrameConfiguration().isShowingNames());
 //        setShowingTags(currentFrameConfiguration().isShowingTags());
@@ -68,6 +69,7 @@ public class PhotoFrame {
         }
         result.setBounds(frameConfiguration.getX(), frameConfiguration.getY(), frameConfiguration.getWidth(), frameConfiguration.getHeight());
         result.setUndecorated(frameConfiguration.isDistractionFree());
+        controlPanel.setVisible(!frameConfiguration.isDistractionFree());
         result.setAlwaysOnTop(frameConfiguration.isAlwaysOnTop());
         result.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         // Watch for user closing frames and notify listeners
@@ -140,6 +142,23 @@ public class PhotoFrame {
         return result;
     }
 
+    private void addHotKeys() {
+        addHotKey("D", "Toggle window decoration", e ->
+                setDistractionFree(!getCurrentFrameConfiguration().isDistractionFree()));
+    }
+
+    public void setDistractionFree(boolean distractionFree) {
+        getCurrentFrameConfiguration().setDistractionFree(distractionFree);
+        this.theFrame.dispose();
+        this.theFrame = buildInitialJFrame();
+        this.theFrame.setVisible(true);
+    }
+
+    public void addHotKey(String keyStroke, String description, ActionListener listener) {
+        mainPanel.registerKeyboardAction(listener, KeyStroke.getKeyStroke(keyStroke), JComponent.WHEN_IN_FOCUSED_WINDOW);
+        hotkeys.add(new HotKey(keyStroke, description));
+    }
+
     public FrameConfiguration getCurrentFrameConfiguration() {
         if (frameState.isFullScreen()) {
             return frameState.getFullScreenConfig();
@@ -201,12 +220,30 @@ public class PhotoFrame {
         theFrame.setVisible(true);
     }
 
+    public void hide() {
+        theFrame.setVisible(false);
+    }
+
+    public void dispose() {
+        theFrame.dispose();
+    }
+
     public void onDispose(Function<PhotoFrame, Void> f) {
         disposeListeners.add(f);
     }
 
     public Collection<PhotoPanel> getPanels() {
         return photoPanels;
+    }
+
+    private static class HotKey {
+        public final String keyStroke;
+        public final String description;
+
+        public HotKey(String keyStroke, String description) {
+            this.keyStroke = keyStroke;
+            this.description = description;
+        }
     }
     // Note to self: The generated form code should appear down here at the bottom of the file, but you have to enable
     // that in Settings under GUI Designer. It defaults to creating binary output, which wouldn't carry over to a gradle
