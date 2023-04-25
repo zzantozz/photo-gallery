@@ -1,5 +1,10 @@
 package rds.photogallery
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
+import java.sql.Connection
+
 /**
  * A {@link PhotoRotation} that selects photos based on ratings using the sqlite ratings db. The database must be fully
  * populated before using this class. The ratings frequency is hardcoded here. It should be made configurable in some
@@ -7,17 +12,70 @@ package rds.photogallery
  */
 class SqliteRatingsBasedPhotoRotation implements PhotoRotation {
 
-    def frequencies = [(-999): 3, (0): 1, (1): 2, (2): 4, (3): 8, (4): 16, (5): 32]
+    private static final Logger log = LoggerFactory.getLogger(SqliteRatingsBasedPhotoRotation.class)
+
+    def frequencies = [(-999): 8, (0): 1, (1): 2, (2): 4, (3): 8, (4): 16, (5): 32]
     def flatFreqList = frequencies.collectMany { Collections.nCopies(it.value, it.key) }
     def totalFreqs = flatFreqList.size()
     def rand = new Random()
     Map<Integer, String> currentCycleByRating = frequencies.collectEntries { [it.key, 'A'] }
+    public static final String CYCLE_EXHAUSTED = 'Cycle Exhausted'
 
     @Override
     String next() {
+        App.metrics().timeAndReturn('find random in sqlite', this::doNext)
+    }
+
+    String doNext() {
         def rating = flatFreqList[rand.nextInt(totalFreqs)]
         def cycleName = currentCycleByRating[rating]
         def conn = App.instance.sqliteDataSource.getConnection()
+        if (log.isInfoEnabled()) {
+            dumpDbStats(conn)
+        }
+        String result = findOneByRating(conn, rating, cycleName)
+        if (result == CYCLE_EXHAUSTED) {
+            // Either we've cycled all photos in this rating, or there are zero photos with this rating.
+            def nextCycle = cycleName == 'A' ? 'B' : 'A'
+            log.info("Setting cycle for rating $rating to $nextCycle")
+            currentCycleByRating[rating] = nextCycle
+            result = findOneByRating(conn, rating, nextCycle)
+        }
+        if (result == CYCLE_EXHAUSTED) {
+            log.warn('Just refreshed a cycle, but still got CYCLE_EXHAUSTED. Is there an empty photo cycle here?')
+        }
+        conn.close()
+        result
+    }
+
+    void dumpDbStats(Connection conn) {
+        Map<Integer, Integer> pastPhotos = new LinkedHashMap<>().withDefault {0}
+        Map<Integer, Integer> comingPhotos = new LinkedHashMap<>().withDefault {0}
+        def statement = conn.createStatement()
+        def resultSet = statement.executeQuery(
+                'select rating, cycle, count(*) from photos group by rating, cycle order by rating')
+        while (resultSet.next()) {
+            Integer rating = resultSet.getInt(1)
+            String cycle = resultSet.getString(2)
+            Integer count = resultSet.getInt(3)
+            Map<Integer, Integer> toUpdate
+            def currentCycle = currentCycleByRating[rating]
+            if (cycle == currentCycle) {
+                toUpdate = pastPhotos
+            } else {
+                toUpdate = comingPhotos
+                def otherCycle = currentCycle == 'A' ? 'B' : 'A'
+            }
+            toUpdate.put(rating, count)
+        }
+        resultSet.close()
+        statement.close()
+        def allKeys = (pastPhotos.keySet() + comingPhotos.keySet()).unique().sort()
+        def descs = allKeys.collect {"$it(${currentCycleByRating[it]}): ${comingPhotos[it]}->${pastPhotos[it]}" }
+        log.info("Rating cycles: $descs")
+    }
+
+    static String findOneByRating(Connection conn, int rating, String cycleName) {
         def findPhotoSql = 'select relative_path from photos where rating = ? and cycle != ? order by random() limit 1'
         def findPhotoStmt = conn.prepareStatement(findPhotoSql)
         findPhotoStmt.setInt(1, rating)
@@ -33,20 +91,10 @@ class SqliteRatingsBasedPhotoRotation implements PhotoRotation {
             updateCycleStmt.execute()
             updateCycleStmt.close()
         } else {
-            // Either we've cycled all photos in this rating, or there are zero photos with this rating.
-            def nextCycle = cycleName == 'A' ? 'B' : 'A'
-            currentCycleByRating[rating] = nextCycle
-            def updateCycleSql = 'update photos set cycle = ? where rating = ?'
-            def updateCycleStmt = conn.prepareStatement(updateCycleSql)
-            updateCycleStmt.setString(1, nextCycle)
-            updateCycleStmt.setInt(2, rating)
-            updateCycleStmt.execute()
-            updateCycleStmt.close()
-            result = 'FAKE_PHOTO_PATH_AT_END_OF_CYCLE'
+            result = CYCLE_EXHAUSTED
         }
         resultSet.close()
         findPhotoStmt.close()
-        conn.close()
         result
     }
 }
