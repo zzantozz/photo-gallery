@@ -339,8 +339,9 @@ public class PhotosController {
         // for "a while", then assign it a new photo.
         long aWhileAgo = System.currentTimeMillis() - 2500;
         if (oldestState.activeLoaders.get() == 0 && oldestState.isSettled() && oldestState.photoDelivered < aWhileAgo) {
-            log.info("Auto changing photo on " + oldestState.photoPanel);
-            oldestState.assignPhotoPath(photoRotation.next());
+            String next = photoRotation.next();
+            log.info("Auto changing photo on " + oldestState.photoPanel + " to " + next);
+            oldestState.assignPhotoPath(next);
         }
     }
 
@@ -365,6 +366,11 @@ public class PhotosController {
     }
 
     public void panelImageSizeIsWrong(PhotoPanel photoPanel, CompletePhoto photo) {
-        photoPanelStates.get(photoPanel).setNeedsRefresh();
+        PhotoPanelState photoPanelState = photoPanelStates.get(photoPanel);
+        if (photoPanelState == null) {
+            log.warn("Not tracking state for panel that reported in! {}", photoPanel);
+            return;
+        }
+        photoPanelState.setNeedsRefresh();
     }
 }

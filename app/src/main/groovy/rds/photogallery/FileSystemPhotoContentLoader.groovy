@@ -11,10 +11,14 @@ class FileSystemPhotoContentLoader implements PhotoContentLoader {
 
     @Override
     CompletePhoto load(String photoRelativePath) {
-        def read = ImageIO.read(new File(photoRootDir, photoRelativePath))
-        if (read == null) {
-            throw new IllegalStateException("Failed to read image from file: " + photoRelativePath)
+        try {
+            def read = ImageIO.read(new File(photoRootDir, photoRelativePath))
+            if (read == null) {
+                throw new IllegalStateException("Failed to read image from file: " + photoRelativePath)
+            }
+            return new CompletePhoto(photoRelativePath, read)
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to load image from path: " + photoRelativePath, e)
         }
-        new CompletePhoto(photoRelativePath, read)
     }
 }
