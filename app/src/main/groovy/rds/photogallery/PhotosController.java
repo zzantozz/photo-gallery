@@ -316,7 +316,7 @@ public class PhotosController {
     private BufferedImage rotateToOrientation(BufferedImage image, String relativePath) {
         try {
             // TODO: requires local files
-            File imageFile = App.resolvePath(relativePath);
+            File imageFile = App.getInstance().resolvePhotoPath(relativePath);
             ImageMetadata metadata1 = Imaging.getMetadata(imageFile);
             // A GIF doesn't return any metadata
             if (metadata1 == null) return image;
