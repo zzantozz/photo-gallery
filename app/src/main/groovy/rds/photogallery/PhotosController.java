@@ -69,35 +69,7 @@ public class PhotosController {
             this.state = State.IDLE;
         }
 
-        public void startLoad(PhotoPanel panel, String path) {
-            log.info("startLoad");
-        }
-
-        public void finishLoad(PhotoPanel panel, String path) {
-            log.info("finishLoad");
-        }
-
-        public void startRotate(PhotoPanel panel, String path) {
-            log.info("startRotate");
-        }
-
-        public void finishRotate(PhotoPanel panel, String path) {
-            log.info("finishRotate");
-        }
-
-        public void startResize(PhotoPanel panel, String path) {
-            log.info("startResize");
-        }
-
-        public void finishResize(PhotoPanel panel, String path) {
-            log.info("finishResize");
-        }
-
-        public void startDeliver(PhotoPanel panel, String path) {
-            log.info("startDeliver");
-        }
-
-        public void finishDeliver(PhotoPanel panel, String path) {
+        public void photoIsDelivered(PhotoPanel panel) {
             log.info("Photo delivered for " + panel);
             photoDelivered = System.currentTimeMillis();
             // We delivered a photo, but does it match the current state of the panel?
@@ -111,7 +83,7 @@ public class PhotosController {
         }
 
         public void failure(PhotoPanel panel, String path, Exception e) {
-            log.info("failure");
+            log.info("Failure load {} for {}", path, panel);
             failureCount++;
             e.printStackTrace();
             this.state = State.FAILED;
@@ -241,28 +213,23 @@ public class PhotosController {
             g.setColor(Color.RED);
             g.drawString("Failed to load: " + pathToLoad, 10, 10);
             g.dispose();
-            state.startDeliver(panel, pathToLoad);
             panel.setPhoto(new CompletePhoto("BROKEN_IMAGE", brokenImage));
             panel.refresh();
-            state.finishDeliver(panel, pathToLoad);
+            state.photoIsDelivered(panel);
             return false;
         }
         state.activeLoaders.incrementAndGet();
         Runnable fullfillTheNeed = () -> {
             try {
                 // loading stage
-                state.startLoad(panel, pathToLoad);
                 final CompletePhoto rawPhoto = App.metrics().timeAndReturn("load photo", () ->
                         App.getInstance().getPhotoContentLoader().load(pathToLoad));
-                state.finishLoad(panel, pathToLoad);
                 if (shouldStopFulfillment(pathToLoad, state, panel)) {
                     return;
                 }
                 // rotate stage
-                state.startRotate(panel, pathToLoad);
                 BufferedImage rotatedImage = App.metrics().timeAndReturn("rotate photo", () ->
                         rotateToOrientation(rawPhoto.getImage(), pathToLoad));
-                state.finishRotate(panel, pathToLoad);
                 if (shouldStopFulfillment(pathToLoad, state, panel)) {
                     return;
                 }
@@ -272,19 +239,16 @@ public class PhotosController {
                     log.info("log this: " + Arrays.toString(objects));
                     return null;
                 };
-                state.startResize(panel, pathToLoad);
                 final BufferedImage resized = App.metrics().timeAndReturn("resize photo", () ->
                         PhotoTools.resizeImage(rotatedPhoto.getImage(), panel.getSize(), logger));
-                state.finishResize(panel, pathToLoad);
                 if (shouldStopFulfillment(pathToLoad, state, panel)) {
                     return;
                 }
                 // deliver stage
-                state.startDeliver(panel, pathToLoad);
                 CompletePhoto resizedPhoto = new CompletePhoto(pathToLoad, resized);
                 panel.setPhoto(resizedPhoto);
                 panel.refresh();
-                state.finishDeliver(panel, pathToLoad);
+                state.photoIsDelivered(panel);
             } catch (Exception e) {
                 state.failure(panel, pathToLoad, e);
             } finally {
