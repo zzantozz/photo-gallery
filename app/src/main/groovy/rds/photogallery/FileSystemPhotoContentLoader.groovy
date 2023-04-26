@@ -11,9 +11,9 @@ class FileSystemPhotoContentLoader implements PhotoContentLoader {
 
     @Override
     CompletePhoto load(String photoRelativePath) {
-        def pathToLoad = App.instance.resolvePathWithRewrites(photoRelativePath)
+        def pathToLoad = App.instance.resolvePhotoPath(photoRelativePath)
         try {
-            def read = ImageIO.read(new File(photoRootDir, pathToLoad))
+            def read = ImageIO.read(pathToLoad)
             if (read == null) {
                 throw new IllegalStateException("Failed to read image from file: " + pathToLoad)
             }

@@ -83,7 +83,7 @@ public class PhotosController {
         }
 
         public void failure(PhotoPanel panel, String path, Exception e) {
-            log.info("Failure load {} for {}", path, panel);
+            log.info("Failed to load {} for {}", path, panel);
             failureCount++;
             e.printStackTrace();
             this.state = State.FAILED;
@@ -191,7 +191,7 @@ public class PhotosController {
 
     private boolean compareStateToReality(final PhotoPanelState state) {
         // State could change, and we need to remember the original value
-        final String pathToLoad = state.assignedPhotoPath;
+        final String assignedPath = state.assignedPhotoPath;
         final PhotoPanel panel = state.photoPanel;
         if (state.activeLoaders.get() > 1) {
             // Just sanity checking here. If I forget code somewhere else, this will show up.
@@ -211,7 +211,7 @@ public class PhotosController {
             g.setColor(Color.BLACK);
             g.fillRect(0, 0, width, height);
             g.setColor(Color.RED);
-            g.drawString("Failed to load: " + pathToLoad, 10, 10);
+            g.drawString("Failed to load photo for path: " + assignedPath, 10, 20);
             g.dispose();
             panel.setPhoto(new CompletePhoto("BROKEN_IMAGE", brokenImage));
             panel.refresh();
@@ -221,36 +221,42 @@ public class PhotosController {
         state.activeLoaders.incrementAndGet();
         Runnable fullfillTheNeed = () -> {
             try {
+                // rewrite stage
+                final String rewritePath = App.metrics().timeAndReturn("rewrite detection", () ->
+                        App.getInstance().resolveRewrite(assignedPath));
+                if (shouldStopFulfillment(assignedPath, state, panel)) {
+                    return;
+                }
                 // loading stage
                 final CompletePhoto rawPhoto = App.metrics().timeAndReturn("load photo", () ->
-                        App.getInstance().getPhotoContentLoader().load(pathToLoad));
-                if (shouldStopFulfillment(pathToLoad, state, panel)) {
+                        App.getInstance().getPhotoContentLoader().load(rewritePath));
+                if (shouldStopFulfillment(assignedPath, state, panel)) {
                     return;
                 }
                 // rotate stage
                 BufferedImage rotatedImage = App.metrics().timeAndReturn("rotate photo", () ->
-                        rotateToOrientation(rawPhoto.getImage(), pathToLoad));
-                if (shouldStopFulfillment(pathToLoad, state, panel)) {
+                        rotateToOrientation(rawPhoto.getImage(), rewritePath));
+                if (shouldStopFulfillment(assignedPath, state, panel)) {
                     return;
                 }
                 // resize stage
-                CompletePhoto rotatedPhoto = new CompletePhoto(pathToLoad, rotatedImage);
+                CompletePhoto rotatedPhoto = new CompletePhoto(assignedPath, rotatedImage);
                 Function<Object[], Void> logger = objects -> {
                     log.info("log this: " + Arrays.toString(objects));
                     return null;
                 };
                 final BufferedImage resized = App.metrics().timeAndReturn("resize photo", () ->
                         PhotoTools.resizeImage(rotatedPhoto.getImage(), panel.getSize(), logger));
-                if (shouldStopFulfillment(pathToLoad, state, panel)) {
+                if (shouldStopFulfillment(assignedPath, state, panel)) {
                     return;
                 }
                 // deliver stage
-                CompletePhoto resizedPhoto = new CompletePhoto(pathToLoad, resized);
+                CompletePhoto resizedPhoto = new CompletePhoto(assignedPath, resized);
                 panel.setPhoto(resizedPhoto);
                 panel.refresh();
                 state.photoIsDelivered(panel);
             } catch (Exception e) {
-                state.failure(panel, pathToLoad, e);
+                state.failure(panel, assignedPath, e);
             } finally {
                 state.activeLoaders.decrementAndGet();
             }
@@ -259,14 +265,14 @@ public class PhotosController {
         return true;
     }
 
-    private boolean shouldStopFulfillment(String pathToLoad, PhotoPanelState state, PhotoPanel panel) {
+    private boolean shouldStopFulfillment(String pathLoading, PhotoPanelState state, PhotoPanel panel) {
         boolean result = false;
-        if (!pathToLoad.equals(state.assignedPhotoPath)) {
+        if (!pathLoading.equals(state.assignedPhotoPath)) {
             log.info("Discarding in-process photo because it's no longer assigned to the panel");
             result = true;
         }
         final CompletePhoto photoOnDisplay = panel.getPhotoOnDisplay();
-        if (photoOnDisplay != null && pathToLoad.equals(photoOnDisplay.getRelativePath()) &&
+        if (photoOnDisplay != null && pathLoading.equals(photoOnDisplay.getRelativePath()) &&
                 panel.imageFitsPanel()) {
             log.info("Discarding in-process photo because the panel already has it");
             result = true;

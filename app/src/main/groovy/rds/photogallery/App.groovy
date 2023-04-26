@@ -230,17 +230,17 @@ class App {
         FilenameUtils.removeExtension(path.toString()).endsWith(REWRITE_SUFFIX)
     }
 
-    String resolvePathWithRewrites(String relativePath) {
+    String resolveRewrite(String relativePath) {
         String dir = FilenameUtils.getFullPath(relativePath)
         String baseName = FilenameUtils.getBaseName(relativePath)
         String extension = FilenameUtils.getExtension(relativePath)
         String comprehensiveWayPath = comprehensiveRewriteCheck(relativePath, dir, baseName)
         String cheapWayPath = cheapRewriteCheck(relativePath, dir, baseName, extension)
-        if (!cheapWayPath.equals(comprehensiveWayPath)) {
+        if (cheapWayPath != comprehensiveWayPath) {
             log.warn("Found a rewrite inconsistency. Cheap path determined {} but comprehensive path determined {}",
                     cheapWayPath, comprehensiveWayPath)
         }
-        return cheapWayPath
+        cheapWayPath
     }
 
     /**
@@ -262,7 +262,7 @@ class App {
         } else {
             pathToLoad = FilenameUtils.concat(dir, list[0])
         }
-        return pathToLoad
+        pathToLoad
     }
 
     /**
@@ -274,13 +274,13 @@ class App {
         String rewriteName1 = baseName + REWRITE_SUFFIX + "." + extension.toUpperCase()
         String rewriteName2 = baseName + REWRITE_SUFFIX + "." + extension.toLowerCase()
         if (new File(searchDir, rewriteName1).exists()) {
-            log.debug("Load {} in place of {}", rewriteName1, relativePath)
+            log.info("Load {} in place of {}", rewriteName1, relativePath)
             return FilenameUtils.concat(dir, rewriteName1)
         } else if (new File(searchDir, rewriteName2).exists()) {
-            log.debug("Load {} in place of {}", rewriteName2, relativePath)
+            log.info("Load {} in place of {}", rewriteName2, relativePath)
             return FilenameUtils.concat(dir, rewriteName2)
         } else {
-            log.debug("Load {}", relativePath)
+            log.info("Load {}", relativePath)
             return relativePath
         }
     }
