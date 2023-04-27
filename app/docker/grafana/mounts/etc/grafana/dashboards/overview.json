@@ -111,6 +111,17 @@
             "type": "graphite",
             "uid": "P1D261A8554D2DA69"
           },
+          "hide": false,
+          "refCount": 0,
+          "refId": "E",
+          "target": "alias(photoGallery.rewrite_detection.mean, 'rewrite')",
+          "textEditor": false
+        },
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "P1D261A8554D2DA69"
+          },
           "refCount": 0,
           "refId": "A",
           "target": "alias(photoGallery.load_photo.mean, 'load')",
@@ -327,7 +338,7 @@
           "target": "aliasByNode(photoGallery.total_photo_delivery_time.{mean,p99,p999}, -1)"
         }
       ],
-      "title": "Photo Delivery Times",
+      "title": "Max Photo Delivery Times",
       "type": "timeseries"
     }
   ],
