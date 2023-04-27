@@ -201,9 +201,16 @@ public class PhotosController {
             // Already loading for this panel/state. Don't queue up double work.
             return false;
         }
-        if (state.failureCount > 10) {
+        state.activeLoaders.incrementAndGet();
+        if (state.activeLoaders.get() != 1) {
+            log.info("Two loaders trying at the same time! I'm giving up.");
+            state.activeLoaders.decrementAndGet();
+            return false;
+        }
+        if (state.failureCount >= 3) {
             // Bail on this one. Give it a default, broken image so that loading and the photo rotation can go on
             state.failureCount = 0;
+            App.metrics().loadFailure();
             int width = panel.getWidth();
             int height = panel.getHeight();
             BufferedImage brokenImage = panel.getGraphicsConfiguration().createCompatibleImage(width, height);
@@ -216,9 +223,9 @@ public class PhotosController {
             panel.setPhoto(new CompletePhoto("BROKEN_IMAGE", brokenImage));
             panel.refresh();
             state.photoIsDelivered(panel);
+            state.activeLoaders.decrementAndGet();
             return false;
         }
-        state.activeLoaders.incrementAndGet();
         Runnable fullfillTheNeed = () -> {
             try {
                 // rewrite stage

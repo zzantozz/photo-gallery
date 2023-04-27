@@ -93,4 +93,8 @@ class Metrics {
     void photoDeliveryTime(long time) {
         registry.timer('total_photo_delivery_time').record(time, TimeUnit.MILLISECONDS)
     }
+
+    void loadFailure() {
+        registry.counter('load_photo_failures').increment()
+    }
 }
