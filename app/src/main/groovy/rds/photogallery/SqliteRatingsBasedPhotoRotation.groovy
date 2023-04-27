@@ -13,13 +13,31 @@ import java.sql.Connection
 class SqliteRatingsBasedPhotoRotation implements PhotoRotation {
 
     private static final Logger log = LoggerFactory.getLogger(SqliteRatingsBasedPhotoRotation.class)
-
-    def frequencies = [(-999): 8, (0): 1, (1): 2, (2): 4, (3): 8, (4): 16, (5): 32]
-    def flatFreqList = frequencies.collectMany { Collections.nCopies(it.value, it.key) }
-    def totalFreqs = flatFreqList.size()
-    def rand = new Random()
-    Map<Integer, String> currentCycleByRating = frequencies.collectEntries { [it.key, 'A'] }
     public static final String CYCLE_EXHAUSTED = 'Cycle Exhausted'
+
+    final def frequencies = [:]
+    final def flatFreqList
+    final def totalFreqs
+    final def rand = new Random()
+    final Map<Integer, String> currentCycleByRating
+
+    SqliteRatingsBasedPhotoRotation() {
+        def frequencyChart = [(-999): 8, (0): 1, (1): 2, (2): 4, (3): 8, (4): 16, (5): 32]
+        def conn = App.instance.sqliteDataSource.getConnection()
+        def statement = conn.createStatement()
+        def resultSet = statement.executeQuery('select distinct(rating) from photos')
+        while (resultSet.next()) {
+            int rating = resultSet.getInt(1)
+            frequencies.put(rating, frequencyChart[rating])
+        }
+        resultSet.close()
+        statement.close()
+        conn.close()
+
+        flatFreqList = frequencies.collectMany { Collections.nCopies(it.value, it.key) }
+        totalFreqs = flatFreqList.size()
+        currentCycleByRating = frequencies.collectEntries { [it.key, 'A'] }
+    }
 
     @Override
     String next() {
