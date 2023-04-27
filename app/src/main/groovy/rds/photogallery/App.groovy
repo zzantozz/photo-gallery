@@ -128,9 +128,16 @@ class App {
      * hasn't yet been displayed.
      */
     private void buildRatingsDb() {
+        def excludedPaths = settings.asStringList(Settings.Setting.EXCLUDED_PATHS)
+        def tagsFilter = new TagsFilter(settings.asString(Settings.Setting.TAG_FILTER))
+        def photoPredicate = { PhotoData it ->
+            def filteredTags = tagsFilter.apply(it)
+            def filteredByPath = excludedPaths.any { path -> it.relativePath.startsWith(path) }
+            !filteredTags && !filteredByPath
+        }
         def photoDataSource = DataSourceLoader.loadLocalData(
                 new File(settings.asString(Settings.Setting.PHOTO_DATA_FILE)),
-                { true },
+                photoPredicate,
                 new File(rootDir))
         def listerForDb = new FileSystemPhotoLister(rootDir)
         def connection = sqliteDataSource.getConnection()
@@ -152,6 +159,10 @@ class App {
             while (listerForDb.hasNext()) {
                 def photoPath = listerForDb.next()
                 def photoData = photoDataSource.getPhotoData(photoPath)
+                if (!photoPredicate(photoData)) {
+                    log.trace("Filtering out of db: " + photoData)
+                    continue
+                }
                 insertStmt.setString(1, photoPath)
                 insertStmt.setInt(2, photoData.rating)
                 insertStmt.setString(3, 'none yet')
