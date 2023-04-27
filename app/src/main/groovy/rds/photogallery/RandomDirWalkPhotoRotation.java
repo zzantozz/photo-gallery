@@ -50,7 +50,7 @@ public class RandomDirWalkPhotoRotation implements PhotoRotation {
     public boolean isImage(Path path) {
         try {
             String contentType = Files.probeContentType(path);
-            return contentType.startsWith("image");
+            return contentType != null && contentType.startsWith("image");
         } catch (IOException e) {
             throw new IllegalStateException("Failed to probe file for media type", e);
         }
