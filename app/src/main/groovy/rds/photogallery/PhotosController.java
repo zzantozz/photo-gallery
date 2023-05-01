@@ -362,7 +362,7 @@ public class PhotosController {
         managePanels(newPanels);
     }
 
-    public void panelImageSizeIsWrong(PhotoPanel photoPanel, CompletePhoto photo) {
+    public void panelImageSizeIsWrong(PhotoPanel photoPanel) {
         PhotoPanelState photoPanelState = photoPanelStates.get(photoPanel);
         if (photoPanelState == null) {
             log.warn("Not tracking state for panel that reported in! {}", photoPanel);

@@ -49,6 +49,7 @@ class App {
 
     private static final App INSTANCE = new App()
     public static final String REWRITE_SUFFIX = '-rewrite'
+    private PhotoDataSource localData
 
     static App getInstance() {
         INSTANCE
@@ -112,6 +113,10 @@ class App {
         sleep(3000)
 
         // Now that the quick version is up and running, we do the heavy lifting to get all the features loaded.
+        localData = DataSourceLoader.loadLocalData(
+                new File(settings.asString(Settings.Setting.PHOTO_DATA_FILE)),
+                { true },
+                new File(rootDir))
         sqliteDataSource = new SQLiteDataSource()
         sqliteDataSource.setUrl('jdbc:sqlite:photos.sqlite')
         // A couple of settings to drastically increase speed at the expense of possible data loss, but this is an
@@ -135,10 +140,6 @@ class App {
             def filteredByPath = excludedPaths.any { path -> it.relativePath.startsWith(path) }
             !filteredTags && !filteredByPath
         }
-        def photoDataSource = DataSourceLoader.loadLocalData(
-                new File(settings.asString(Settings.Setting.PHOTO_DATA_FILE)),
-                photoPredicate,
-                new File(rootDir))
         def listerForDb = new FileSystemPhotoLister(rootDir)
         def connection = sqliteDataSource.getConnection()
         def initDbStmt = connection.createStatement()
@@ -158,7 +159,7 @@ class App {
         metrics.time('insert all rows to db', {
             while (listerForDb.hasNext()) {
                 def photoPath = listerForDb.next()
-                def photoData = photoDataSource.getPhotoData(photoPath)
+                def photoData = this.localData.getPhotoData(photoPath)
                 if (!photoPredicate(photoData)) {
                     log.trace("Filtering out of db: " + photoData)
                     continue
@@ -321,5 +322,14 @@ class App {
 
     File resolvePhotoPath(String photoPath) {
         new File(rootDir, photoPath)
+    }
+
+    PhotoData getPhotoData(String relativePath) {
+        def result = null
+        // TODO: PhotoData is hacked into the constructor of CompletePhoto, which will get called before data is loaded
+        if (localData) {
+            result = localData.getPhotoData(relativePath)
+        }
+        return result ? result : new PhotoData(relativePath)
     }
 }

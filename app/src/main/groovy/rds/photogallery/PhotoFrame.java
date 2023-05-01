@@ -39,9 +39,6 @@ public class PhotoFrame {
         this.frameState = frameState;
 //        setUpControls(currentFrameConfiguration().getRows(), currentFrameConfiguration().getColumns());
         addHotKeys();
-//        setShowingRatings(currentFrameConfiguration().isShowingRatings());
-//        setShowingNames(currentFrameConfiguration().isShowingNames());
-//        setShowingTags(currentFrameConfiguration().isShowingTags());
         this.theFrame = buildInitialJFrame();
 //        cloneButton.addActionListener(e -> Application.instance.newPhotoFrame(PhotoFrameAdvanced.this));
     }
@@ -67,6 +64,10 @@ public class PhotoFrame {
             photoPanels.add(photoPanel);
             mainDisplayArea.add(photoPanel);
         }
+        // ONLY after the panels are added, tell them what they need to be showing.
+        setShowingRatings(getCurrentFrameConfiguration().isShowingRatings());
+        setShowingNames(getCurrentFrameConfiguration().isShowingNames());
+        setShowingTags(getCurrentFrameConfiguration().isShowingTags());
         result.setBounds(frameConfiguration.getX(), frameConfiguration.getY(), frameConfiguration.getWidth(), frameConfiguration.getHeight());
         result.setUndecorated(frameConfiguration.isDistractionFree());
         controlPanel.setVisible(!frameConfiguration.isDistractionFree());
@@ -145,6 +146,45 @@ public class PhotoFrame {
     private void addHotKeys() {
         addHotKey("D", "Toggle window decoration", e ->
                 setDistractionFree(!getCurrentFrameConfiguration().isDistractionFree()));
+        addHotKey("N", "Show photo names", this::toggleShowingNames);
+        addHotKey("R", "Show ratings", this::toggleShowingRatings);
+        addHotKey("T", "Show tags", this::toggleShowingTags);
+    }
+
+    public void toggleShowingNames(ActionEvent e) {
+        boolean showingNames = getCurrentFrameConfiguration().isShowingNames();
+        setShowingNames(!showingNames);
+    }
+
+    public void setShowingNames(boolean showingNames) {
+        getCurrentFrameConfiguration().setShowingNames(showingNames);
+        for (PhotoPanel photoPanel : photoPanels) {
+            photoPanel.setShowingNames(showingNames);
+        }
+    }
+
+    public void toggleShowingRatings(ActionEvent e) {
+        boolean showingRatings = getCurrentFrameConfiguration().isShowingRatings();
+        setShowingRatings(!showingRatings);
+    }
+
+    public void setShowingRatings(boolean showingRatings) {
+        getCurrentFrameConfiguration().setShowingRatings(showingRatings);
+        for (PhotoPanel photoPanel : photoPanels) {
+            photoPanel.setShowingRatings(showingRatings);
+        }
+    }
+
+    public void toggleShowingTags(ActionEvent e) {
+        boolean showingTags = getCurrentFrameConfiguration().isShowingTags();
+        setShowingTags(!showingTags);
+    }
+
+    public void setShowingTags(boolean showingTags) {
+        getCurrentFrameConfiguration().setShowingTags(showingTags);
+        for (PhotoPanel photoPanel : photoPanels) {
+            photoPanel.setShowingTags(showingTags);
+        }
     }
 
     public void setDistractionFree(boolean distractionFree) {
