@@ -22,4 +22,9 @@ class MemoryPhotoDataSource implements PhotoDataSource {
         }
         result
     }
+
+    @Override
+    void changeRating(PhotoData photoData, int newRating) {
+        throw new UnsupportedOperationException("Not yet implemented")
+    }
 }

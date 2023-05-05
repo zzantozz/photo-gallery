@@ -324,6 +324,10 @@ class App {
         new File(rootDir, photoPath)
     }
 
+    File resolvePhotoPath(PhotoData photoData) {
+        new File(rootDir, photoData.relativePath)
+    }
+
     PhotoData getPhotoData(String relativePath) {
         def result = null
         // TODO: PhotoData is hacked into the constructor of CompletePhoto, which will get called before data is loaded
@@ -331,5 +335,9 @@ class App {
             result = localData.getPhotoData(relativePath)
         }
         return result ? result : new PhotoData(relativePath)
+    }
+
+    PopupListener makeMeAPopupListener(PhotoPanel photoPanel) {
+        new PopupListener(photoPanel, localData, controller)
     }
 }

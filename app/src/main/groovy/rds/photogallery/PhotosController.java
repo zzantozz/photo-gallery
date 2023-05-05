@@ -21,6 +21,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * Manages all the photos that are being shown and should be shown. It manages a set of photo frames, including all the
@@ -48,6 +50,9 @@ public class PhotosController {
         long photoAssigned;
         long photoDelivered;
         AtomicInteger activeLoaders = new AtomicInteger();
+        // Should this be part of the State enum?
+        boolean sticky;
+
         public PhotoPanelState(PhotoPanel photoPanel, String photoPath) {
             this.state = State.INIT;
             this.photoPanel = photoPanel;
@@ -167,6 +172,19 @@ public class PhotosController {
     public void unpauseAndUnhideAll() {
         photoFrames.forEach(PhotoFrame::show);
         startAutoChanging();
+    }
+
+    public void toggleSticky(PhotoPanel photoPanel) {
+        PhotoPanelState state = photoPanelStates.get(photoPanel);
+        state.sticky = !state.sticky;
+    }
+
+    public void nextPhotoEvenIfStickyFor(PhotoPanel photoPanel) {
+
+    }
+
+    public void previousPhotoEvenIfStickyFor(PhotoPanel photoPanel) {
+
     }
 
     public void dispose() {
@@ -322,12 +340,16 @@ public class PhotosController {
 
 
     public void next() {
-        if (photoPanelStates.isEmpty()) {
+        // Take out anything marked sticky
+        List<PhotoPanelState> statesToConsider = photoPanelStates.values().stream()
+                .filter(state -> !state.sticky)
+                .collect(Collectors.toList());
+        if (statesToConsider.isEmpty()) {
             return;
         }
         // Find the panel that had a photo delivered to it the longest ago
-        PhotoPanelState oldestState = photoPanelStates.values().iterator().next();
-        for (PhotoPanelState state : photoPanelStates.values()) {
+        PhotoPanelState oldestState = statesToConsider.iterator().next();
+        for (PhotoPanelState state : statesToConsider) {
             if (state.photoDelivered < oldestState.photoDelivered) {
                 oldestState = state;
             }

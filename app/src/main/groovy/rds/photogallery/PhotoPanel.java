@@ -28,6 +28,7 @@ public class PhotoPanel extends JPanel {
 
     public PhotoPanel(String name) {
         this.name = name;
+        this.addMouseListener(App.getInstance().makeMeAPopupListener(this));
     }
 
     public void setPhoto(CompletePhoto photo) {
