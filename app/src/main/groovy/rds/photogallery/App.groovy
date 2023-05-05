@@ -95,8 +95,18 @@ class App {
         // TODO: Scheduler is bad! It's taking the place of what should be reactive, event driven things!
         scheduler = Executors.newSingleThreadScheduledExecutor(
                 new ThreadFactoryBuilder().setNameFormat('scheduler-%d').build())
-        rootDir = JOptionPane.showInputDialog("Enter path to photo dir")
-        settings.setString(Settings.Setting.PHOTO_DATA_FILE, rootDir + '/photo-db.txt')
+        rootDir = settings.asString(Settings.Setting.PHOTO_ROOT_DIR)
+        if (!rootDir) {
+            rootDir = JOptionPane.showInputDialog("Enter path to photo dir")
+        }
+        if (!rootDir) {
+            System.err.println("You must provide a root dir to find photos in.")
+            System.exit(1)
+        }
+        def photoDataFilePath = settings.asString(Settings.Setting.PHOTO_DATA_FILE)
+        if (!Paths.get(photoDataFilePath).isAbsolute()) {
+            settings.setString(Settings.Setting.PHOTO_DATA_FILE, rootDir + '/' + photoDataFilePath)
+        }
         settings.setString(Settings.Setting.PHOTO_ROOT_DIR, rootDir)
         def photoRotation = new RandomDirWalkPhotoRotation(Paths.get(rootDir))
         photoContentLoader = new FileSystemPhotoContentLoader(rootDir)

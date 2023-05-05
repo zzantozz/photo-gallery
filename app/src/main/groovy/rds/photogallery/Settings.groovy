@@ -24,6 +24,7 @@ class Settings {
 
     enum Setting {
         FRAME_STATE_FILE('frame-state.json'),
+        // If relative, will be resolved relative to the PHOTO_ROOT_DIR
         PHOTO_DATA_FILE('photo-db.txt'),
         METER_REGISTRY('Graphite'),
         GRAPHITE_HOST('192.168.1.105'),
