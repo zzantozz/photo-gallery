@@ -21,18 +21,19 @@ class PopupListener extends MouseAdapter {
     private static final Logger log = LoggerFactory.getLogger(PhotoPanel.class)
 
     private PhotoPanel photoPanel
-    private PhotosController controller
-    private PhotoDataSource photoDataSource
+//    private PhotosController controller
+//    private PhotoDataSource photoDataSource
     private JMenu ratingsMenu
     private JMenuItem rateLowerMenuItem
     private JMenuItem rateHigherMenuItem
     private JMenuItem removeMenuItem
     private JTextField tagsField = new JTextField(30)
 
-    PopupListener(PhotoPanel photoPanel, PhotoDataSource photoDataSource, PhotosController controller) {
+    PopupListener(PhotoPanel photoPanel) {
         this.photoPanel = photoPanel
-        this.photoDataSource = photoDataSource
-        this.controller = controller
+        // The data source isn't yet created when the listener is instantiated. Have to get it a different way.
+//        this.photoDataSource = photoDataSource
+//        this.controller = controller
     }
 
     void mousePressed(MouseEvent e) {
@@ -207,7 +208,7 @@ class PopupListener extends MouseAdapter {
             } else {
                 stars = e.getActionCommand().length()
             }
-            photoDataSource.changeRating(photoData, stars)
+            App.instance.localData.changeRating(photoData, stars)
             photoPanel.repaint()
         }
     }
@@ -224,7 +225,9 @@ class PopupListener extends MouseAdapter {
         @Override
         void actionPerformed(ActionEvent e) {
             int stars = photoData.getRating() + modification
-            photoDataSource.changeRating(photoData, stars)
+            // This is a quick hack to get the data we need. What's a better way to ensure this listener can reach the
+            // critical objects, like the data source?
+            App.instance.localData.changeRating(photoData, stars)
             photoPanel.repaint()
         }
     }

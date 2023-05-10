@@ -60,6 +60,12 @@ public class PhotoData {
         implicitTags.add(Files.getFileExtension(path).toLowerCase());
     }
 
+    /**
+     * Indicates whether this object contains any user data, or if it's just an empty placeholder for a newly-discovered
+     * photo.
+     *
+     * @return true if it contains no user data yet
+     */
     public boolean isDefault() {
         return UNRATED.equals(rating) && userTags.isEmpty();
     }

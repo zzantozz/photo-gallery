@@ -1,6 +1,7 @@
 package rds.photogallery
 
 import java.util.function.Predicate
+import java.util.stream.Stream
 
 class MemoryPhotoDataSource implements PhotoDataSource {
     private final Map<String, PhotoData> photoDatasByPath
@@ -25,6 +26,11 @@ class MemoryPhotoDataSource implements PhotoDataSource {
 
     @Override
     void changeRating(PhotoData photoData, int newRating) {
-        throw new UnsupportedOperationException("Not yet implemented")
+        photoData.rating = newRating
+    }
+
+    @Override
+    Stream<PhotoData> getAllPhotoData() {
+        photoDatasByPath.values().stream()
     }
 }

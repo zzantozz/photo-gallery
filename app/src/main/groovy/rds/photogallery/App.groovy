@@ -123,7 +123,7 @@ class App {
         sleep(3000)
 
         // Now that the quick version is up and running, we do the heavy lifting to get all the features loaded.
-        localData = DataSourceLoader.loadLocalData(
+        localData = LocalDataIO.loadLocalData(
                 new File(settings.asString(Settings.Setting.PHOTO_DATA_FILE)),
                 { true },
                 new File(rootDir))
@@ -237,6 +237,14 @@ class App {
     }
 
     private void registerGlobalHotKeys(PhotoFrame photoFrame) {
+        photoFrame.addHotKey("ctrl S", "Save database", (e) -> {
+            int answer = JOptionPane.showConfirmDialog(
+                    null, "Saving photo db. Are you sure?", "Save DB", JOptionPane.YES_NO_OPTION);
+            if (answer == JOptionPane.YES_OPTION) {
+                def photoDataFile = settings.asString(Settings.Setting.PHOTO_DATA_FILE)
+                LocalDataIO.saveLocalData(new File(photoDataFile), localData)
+            }
+        });
         photoFrame.addHotKey("ESCAPE", "Quit", (e) -> {
             controller.pauseAndHideAll()
             int answer = JOptionPane.showConfirmDialog(null, 'Are you sure?', 'Exit now?', JOptionPane.YES_NO_OPTION)
@@ -348,6 +356,6 @@ class App {
     }
 
     PopupListener makeMeAPopupListener(PhotoPanel photoPanel) {
-        new PopupListener(photoPanel, localData, controller)
+        new PopupListener(photoPanel)
     }
 }
