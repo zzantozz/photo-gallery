@@ -40,6 +40,7 @@ dependencies {
     implementation 'org.jolokia:jolokia-jvm:1.6.2:agent'
     implementation 'io.micrometer:micrometer-registry-graphite:1.7.5'
     implementation 'io.micrometer:micrometer-registry-opentsdb:1.8.0'
+    implementation 'org.jolokia:jolokia-jvm:1.6.2:agent'
     // photo rotation
     implementation 'com.github.mike10004:commons-imaging:1.0a1'
     // For working with filenames
@@ -55,6 +56,9 @@ dependencies {
 application {
     // Define the main class for the application.
     mainClass = 'rds.photogallery.App'
+    applicationDefaultJvmArgs = [
+        '-javaagent:/home/ryan/.m2/repository/org/jolokia/jolokia-jvm/1.6.2/jolokia-jvm-1.6.2-agent.jar=port=7777,host=172.17.0.1'
+    ]
 }
 
 distTar {
