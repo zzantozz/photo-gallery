@@ -57,7 +57,8 @@ application {
     // Define the main class for the application.
     mainClass = 'rds.photogallery.App'
     applicationDefaultJvmArgs = [
-        '-javaagent:/home/ryan/.m2/repository/org/jolokia/jolokia-jvm/1.6.2/jolokia-jvm-1.6.2-agent.jar=port=7777,host=172.17.0.1'
+        '-javaagent:/home/ryan/.m2/repository/org/jolokia/jolokia-jvm/1.6.2/jolokia-jvm-1.6.2-agent.jar=port=7777,host=172.17.0.1',
+        '-Xmx1g',
     ]
 }
 
