@@ -28,3 +28,4 @@ services:
       - "GRAPHITE_PORT=2004"
       - "GRAPHITE_PROTOCOL=pickled"
       - "LOG_LEVEL=INFO"
+      - "INTERVAL_IN_SEC=10"
