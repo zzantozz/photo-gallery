@@ -247,11 +247,11 @@ class App {
         });
         photoFrame.addHotKey("ESCAPE", "Quit", (e) -> {
             controller.pauseAndHideAll()
-            int answer = JOptionPane.showConfirmDialog(null, 'Are you sure?', 'Exit now?', JOptionPane.YES_NO_OPTION)
-            if (answer == JOptionPane.NO_OPTION) {
-                controller.unpauseAndUnhideAll()
-            } else {
+            int answer = HomelessDialog.showConfirmDialog(null, 'Are you sure?', 'Exit now?', JOptionPane.YES_NO_OPTION)
+            if (answer == JOptionPane.YES_OPTION) {
                 shutDown()
+            } else {
+                controller.unpauseAndUnhideAll()
             }
         });
     }
