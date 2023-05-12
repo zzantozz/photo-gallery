@@ -158,7 +158,7 @@
           "target": "alias(photoGallery.paint_photo_panel.mean, 'paint')"
         }
       ],
-      "title": "Average Photo Delivery Time Allocation",
+      "title": "Average photo delivery time allocation",
       "type": "timeseries"
     },
     {
@@ -249,7 +249,7 @@
           "target": "aliasByNode(photoGallery.find_random_in_sqlite.{mean,p99,p999}, -1)"
         }
       ],
-      "title": "Sqlite Random Photo Time",
+      "title": "Sqlite random photo time",
       "type": "timeseries"
     },
     {
@@ -338,7 +338,97 @@
           "target": "aliasByNode(photoGallery.total_photo_delivery_time.{mean,p99,p999}, -1)"
         }
       ],
-      "title": "Max Photo Delivery Times",
+      "title": "Max photo delivery times",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "graphite",
+        "uid": "P1D261A8554D2DA69"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 50,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "P1D261A8554D2DA69"
+          },
+          "refId": "A",
+          "target": "aliasByNode(movingSum(nonNegativeDerivative(photoGallery.photo_shown.rating.*.count), '5min'), 3)",
+          "textEditor": true
+        }
+      ],
+      "title": "Rating freqency",
       "type": "timeseries"
     },
     {
@@ -394,18 +484,17 @@
                 "value": 80
               }
             ]
-          },
-          "unit": "decbytes"
+          }
         },
         "overrides": []
       },
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 8
+        "x": 0,
+        "y": 16
       },
-      "id": 8,
+      "id": 21,
       "options": {
         "legend": {
           "calcs": [],
@@ -425,11 +514,25 @@
             "uid": "P1D261A8554D2DA69"
           },
           "refId": "A",
-          "target": "aliasByNode(jmx.*.java.lang.type_Memory.HeapMemoryUsage.{max,used}, 6)"
+          "target": "limit(sortBy(aliasByNode(movingSum(nonNegativeDerivative(photoGallery.photo_shown.dir.*.count), '5min'), 3), 'count', true), 5)",
+          "textEditor": true
         }
       ],
-      "title": "Heap usage",
+      "title": "Photos shown by dir (top 5)",
       "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 18,
+      "panels": [],
+      "title": "JVM stats",
+      "type": "row"
     },
     {
       "datasource": {
@@ -493,7 +596,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 16
+        "y": 25
       },
       "id": 12,
       "options": {
@@ -574,7 +677,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "decbytes"
         },
         "overrides": []
       },
@@ -582,7 +686,96 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 16
+        "y": 25
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "P1D261A8554D2DA69"
+          },
+          "refId": "A",
+          "target": "aliasByNode(jmx.*.java.lang.type_Memory.HeapMemoryUsage.{max,used}, 6)"
+        }
+      ],
+      "title": "Heap usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "graphite",
+        "uid": "P1D261A8554D2DA69"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 33
       },
       "id": 10,
       "options": {

@@ -280,6 +280,7 @@ public class PhotosController {
                 panel.setPhoto(resizedPhoto);
                 panel.refresh();
                 state.photoIsDelivered(panel);
+                App.metrics().photoShown(resizedPhoto.getData());
             } catch (Exception e) {
                 state.failure(panel, assignedPath, e);
             } finally {

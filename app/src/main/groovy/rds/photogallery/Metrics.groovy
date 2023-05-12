@@ -1,7 +1,9 @@
 package rds.photogallery
 
 import io.micrometer.core.instrument.Clock
+import io.micrometer.core.instrument.Meter
 import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.config.NamingConvention
 import io.micrometer.core.instrument.util.HierarchicalNameMapper
 import io.micrometer.graphite.GraphiteConfig
 import io.micrometer.graphite.GraphiteMeterRegistry
@@ -9,10 +11,12 @@ import io.micrometer.graphite.GraphiteProtocol
 import io.micrometer.opentsdb.OpenTSDBConfig
 import io.micrometer.opentsdb.OpenTSDBMeterRegistry
 
+import java.nio.file.Paths
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
+import java.util.stream.Collectors
 
 /**
  * Records metrics about the app. To start with, it's a simple, dumb implementation that just writes stuff to stdout.
@@ -72,6 +76,8 @@ class Metrics {
             }
             registry = new GraphiteMeterRegistry(graphiteConfig, Clock.SYSTEM,
                     (id, convention) -> "photoGallery." + HierarchicalNameMapper.DEFAULT.toHierarchicalName(id, convention))
+            registry.config()
+                    .namingConvention(NamingConvention.identity)
         } else {
             throw new IllegalStateException("The " + Settings.Setting.METER_REGISTRY.name() + " setting must be either "
                     + " 'OpenTSDB' or 'Graphite'.")
@@ -96,5 +102,17 @@ class Metrics {
 
     void loadFailure() {
         registry.counter('load_photo_failures').increment()
+    }
+
+    void photoShown(PhotoData data) {
+        registry.counter("photo_shown.rating.${data.rating}").increment()
+        def path = Paths.get(data.relativePath)
+        final String parent
+        if (path.nameCount == 1) {
+            parent = 'root'
+        } else {
+            parent = path.getName(path.nameCount - 2)
+        }
+        registry.counter("photo_shown.dir.$parent").increment()
     }
 }
