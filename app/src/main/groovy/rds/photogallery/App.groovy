@@ -358,4 +358,24 @@ class App {
     PopupListener makeMeAPopupListener(PhotoPanel photoPanel) {
         new PopupListener(photoPanel)
     }
+
+    /**
+     * Changes or sets the rating of a photo. This is the one and only safe way to do so. It ensures the data is updated
+     * in the photo data and also in the current photo rotation so that the change is both saved long term and takes
+     * effect immediately.
+     */
+    void changeRating(PhotoData photoData, int newRating) {
+        localData.changeRating(photoData, newRating)
+        def conn = sqliteDataSource.getConnection()
+        def sql = 'update photos set rating = ? where relative_path = ?'
+        def stmt = conn.prepareStatement(sql)
+        stmt.setInt(1, newRating)
+        stmt.setString(2, photoData.relativePath)
+        int count = stmt.executeUpdate()
+        stmt.close()
+        conn.close()
+        if (count != 1) {
+            throw new IllegalStateException("Should have updated exactly one entry in sqlite, updated " + count)
+        }
+    }
 }

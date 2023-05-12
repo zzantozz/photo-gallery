@@ -208,7 +208,7 @@ class PopupListener extends MouseAdapter {
             } else {
                 stars = e.getActionCommand().length()
             }
-            App.instance.localData.changeRating(photoData, stars)
+            App.instance.changeRating(photoData, stars)
             photoPanel.repaint()
         }
     }
@@ -225,9 +225,7 @@ class PopupListener extends MouseAdapter {
         @Override
         void actionPerformed(ActionEvent e) {
             int stars = photoData.getRating() + modification
-            // This is a quick hack to get the data we need. What's a better way to ensure this listener can reach the
-            // critical objects, like the data source?
-            App.instance.localData.changeRating(photoData, stars)
+            App.instance.changeRating(photoData, stars)
             photoPanel.repaint()
         }
     }
