@@ -131,15 +131,20 @@ class HomelessDialog {
         southPanel.add(yesButton)
         southPanel.add(noButton)
         contentPane.add(southPanel, BorderLayout.SOUTH)
-        frame.pack()
-        frame.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE)
-
         // I found this code down deep under the JOptionPane stuff. If I try a simple CountDownLatch here, the dialog
         // seems to freeze, never showing any of its content. This makes it work. I don't know why.
         final EventQueue eventQueue = Toolkit.getDefaultToolkit().getSystemEventQueue()
         def secondaryLoop = eventQueue.createSecondaryLoop()
         int returnValue = JOptionPane.CLOSED_OPTION
-         yesButton.addActionListener({
+        contentPane.registerKeyboardAction((e) -> {
+            returnValue = JOptionPane.YES_OPTION
+            secondaryLoop.exit()
+        }, KeyStroke.getKeyStroke('Y'), JComponent.WHEN_IN_FOCUSED_WINDOW)
+        contentPane.registerKeyboardAction((e) -> {
+            returnValue = JOptionPane.NO_OPTION
+            secondaryLoop.exit()
+        }, KeyStroke.getKeyStroke('N'), JComponent.WHEN_IN_FOCUSED_WINDOW)
+        yesButton.addActionListener({
             returnValue = JOptionPane.YES_OPTION
             secondaryLoop.exit()
         })
@@ -153,6 +158,8 @@ class HomelessDialog {
                 secondaryLoop.exit()
             }
         })
+        frame.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE)
+        frame.pack()
         frame.setVisible(true)
         secondaryLoop.enter()
         frame.dispose()
