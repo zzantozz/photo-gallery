@@ -149,7 +149,7 @@ public class PhotoFrame {
         addHotKey("F", "Toggle full screen", e -> {
             boolean wasFullScreen = frameState.isFullScreen();
             frameState.setFullScreen(!wasFullScreen);
-            theFrame.dispose();
+            safeDispose();
             theFrame = buildInitialJFrame();
             theFrame.setVisible(true);
         });
@@ -197,7 +197,7 @@ public class PhotoFrame {
 
     public void setDistractionFree(boolean distractionFree) {
         getCurrentFrameConfiguration().setDistractionFree(distractionFree);
-        this.theFrame.dispose();
+        safeDispose();
         this.theFrame = buildInitialJFrame();
         this.theFrame.setVisible(true);
     }
@@ -280,8 +280,22 @@ public class PhotoFrame {
         theFrame.setVisible(false);
     }
 
+    /**
+     * Destroys this PhotoFrame and all its GUI resources. Dispose events will be propagated to registered listeners.
+     */
     public void dispose() {
         theFrame.dispose();
+    }
+
+    /**
+     * Disposes the internal JFrame only and doesn't propagate dispose events to registered listeners. This is the
+     * method to use when you need to destroy the JFrame and build another in its place, like to go fullscreen.
+     */
+    private void safeDispose() {
+        List<Function<PhotoFrame, Void>> listeners = disposeListeners;
+        disposeListeners.removeAll(listeners);
+        theFrame.dispose();
+        disposeListeners.addAll(listeners);
     }
 
     public void onDispose(Function<PhotoFrame, Void> f) {
