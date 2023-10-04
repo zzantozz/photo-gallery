@@ -22,7 +22,7 @@ class SqliteRatingsBasedPhotoRotation implements PhotoRotation {
     final Map<Integer, String> currentCycleByRating
 
     SqliteRatingsBasedPhotoRotation() {
-        def frequencyChart = [(-999): 8, (0): 1, (1): 2, (2): 4, (3): 8, (4): 16, (5): 32]
+        def frequencyChart = [(-999): 16, (0): 1, (1): 2, (2): 4, (3): 8, (4): 16, (5): 32]
         def conn = App.instance.sqliteDataSource.getConnection()
         def statement = conn.createStatement()
         def resultSet = statement.executeQuery('select distinct(rating) from photos')
