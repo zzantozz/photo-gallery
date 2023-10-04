@@ -4,6 +4,7 @@ import io.micrometer.core.instrument.Clock
 import io.micrometer.core.instrument.Meter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.config.NamingConvention
+import io.micrometer.core.instrument.logging.LoggingMeterRegistry
 import io.micrometer.core.instrument.util.HierarchicalNameMapper
 import io.micrometer.graphite.GraphiteConfig
 import io.micrometer.graphite.GraphiteMeterRegistry
@@ -26,8 +27,8 @@ class Metrics {
     private final MeterRegistry registry
 
     Metrics() {
-        String registrySetting = App.settings().asString(Settings.Setting.METER_REGISTRY)
-        if (registrySetting == "OpenTSDB") {
+        String registrySetting = App.settings().asString(Settings.Setting.METER_REGISTRY).toLowerCase()
+        if (registrySetting == "opentsdb") {
             OpenTSDBConfig openTsdbConfig = new OpenTSDBConfig() {
                 @Override
                 String get(String key) {
@@ -40,7 +41,7 @@ class Metrics {
                 }
             }
             registry = new OpenTSDBMeterRegistry(openTsdbConfig, Clock.SYSTEM)
-        } else if (registrySetting == "Graphite") {
+        } else if (registrySetting == "graphite") {
             GraphiteConfig graphiteConfig = new GraphiteConfig() {
                 @Override
                 String get(String k) {
@@ -78,9 +79,11 @@ class Metrics {
                     (id, convention) -> "photoGallery." + HierarchicalNameMapper.DEFAULT.toHierarchicalName(id, convention))
             registry.config()
                     .namingConvention(NamingConvention.identity)
+        } else if (registrySetting == "none") {
+            registry = new LoggingMeterRegistry()
         } else {
-            throw new IllegalStateException("The " + Settings.Setting.METER_REGISTRY.name() + " setting must be either "
-                    + " 'OpenTSDB' or 'Graphite'.")
+            throw new IllegalStateException("The " + Settings.Setting.METER_REGISTRY.name() + " setting must be one of "
+                    + " 'OpenTSDB', 'Graphite', or 'None' (case insensitive).")
         }
     }
 
