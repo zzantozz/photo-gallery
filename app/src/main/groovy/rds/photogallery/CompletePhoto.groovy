@@ -1,11 +1,13 @@
 package rds.photogallery
 
+import java.awt.Image
 import java.awt.image.BufferedImage
 
 class CompletePhoto {
     final String relativePath
     final PhotoData data
     BufferedImage image
+    Image gif
 
     CompletePhoto(String relativePath, BufferedImage image) {
         this.relativePath = relativePath

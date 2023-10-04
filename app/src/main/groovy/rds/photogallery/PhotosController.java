@@ -244,43 +244,59 @@ public class PhotosController {
             state.activeLoaders.decrementAndGet();
             return false;
         }
-        Runnable fullfillTheNeed = () -> {
+        final Runnable fullfillTheNeed = () -> {
             try {
-                // rewrite stage
-                final String rewritePath = App.metrics().timeAndReturn("rewrite detection", () ->
-                        App.getInstance().resolveRewrite(assignedPath));
-                if (shouldStopFulfillment(assignedPath, state, panel)) {
-                    return;
-                }
-                // loading stage
-                final CompletePhoto rawPhoto = App.metrics().timeAndReturn("load photo", () ->
-                        App.getInstance().getPhotoContentLoader().load(rewritePath));
-                if (shouldStopFulfillment(assignedPath, state, panel)) {
-                    return;
-                }
-                // rotate stage
-                BufferedImage rotatedImage = App.metrics().timeAndReturn("rotate photo", () ->
-                        rotateToOrientation(rawPhoto.getImage(), rewritePath));
-                if (shouldStopFulfillment(assignedPath, state, panel)) {
-                    return;
-                }
-                // resize stage
-                CompletePhoto rotatedPhoto = new CompletePhoto(assignedPath, rotatedImage);
-                Function<Object[], Void> logger = objects -> {
-                    log.info("log this: " + Arrays.toString(objects));
-                    return null;
-                };
-                final BufferedImage resized = App.metrics().timeAndReturn("resize photo", () ->
-                        PhotoTools.resizeImage(rotatedPhoto.getImage(), panel.getSize(), logger));
-                if (shouldStopFulfillment(assignedPath, state, panel)) {
-                    return;
+                final CompletePhoto photoToDeliver;
+                if (assignedPath.toLowerCase().endsWith(".gif")) {
+                    // rewrite stage
+                    final String rewritePath = App.metrics().timeAndReturn("rewrite detection", () ->
+                            App.getInstance().resolveRewrite(assignedPath));
+                    if (shouldStopFulfillment(assignedPath, state, panel)) {
+                        return;
+                    }
+                    // loading stage
+                    photoToDeliver = App.metrics().timeAndReturn("load photo", () ->
+                            App.getInstance().getPhotoContentLoader().getToolkitImage(rewritePath));
+                    if (shouldStopFulfillment(assignedPath, state, panel)) {
+                        return;
+                    }
+                } else {
+                    // rewrite stage
+                    final String rewritePath = App.metrics().timeAndReturn("rewrite detection", () ->
+                            App.getInstance().resolveRewrite(assignedPath));
+                    if (shouldStopFulfillment(assignedPath, state, panel)) {
+                        return;
+                    }
+                    // loading stage
+                    final CompletePhoto rawPhoto = App.metrics().timeAndReturn("load photo", () ->
+                            App.getInstance().getPhotoContentLoader().load(rewritePath));
+                    if (shouldStopFulfillment(assignedPath, state, panel)) {
+                        return;
+                    }
+                    // rotate stage
+                    BufferedImage rotatedImage = App.metrics().timeAndReturn("rotate photo", () ->
+                            rotateToOrientation(rawPhoto.getImage(), rewritePath));
+                    if (shouldStopFulfillment(assignedPath, state, panel)) {
+                        return;
+                    }
+                    // resize stage
+                    CompletePhoto rotatedPhoto = new CompletePhoto(assignedPath, rotatedImage);
+                    Function<Object[], Void> logger = objects -> {
+                        log.info("log this: " + Arrays.toString(objects));
+                        return null;
+                    };
+                    final BufferedImage resized = App.metrics().timeAndReturn("resize photo", () ->
+                            PhotoTools.resizeImage(rotatedPhoto.getImage(), panel.getSize(), logger));
+                    if (shouldStopFulfillment(assignedPath, state, panel)) {
+                        return;
+                    }
+                    photoToDeliver = new CompletePhoto(assignedPath, resized);
                 }
                 // deliver stage
-                CompletePhoto resizedPhoto = new CompletePhoto(assignedPath, resized);
-                panel.setPhoto(resizedPhoto);
+                panel.setPhoto(photoToDeliver);
                 panel.refresh();
                 state.photoIsDelivered(panel);
-                App.metrics().photoShown(resizedPhoto.getData());
+                App.metrics().photoShown(photoToDeliver.getData());
             } catch (Exception e) {
                 state.failure(panel, assignedPath, e);
             } finally {

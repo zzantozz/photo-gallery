@@ -6,4 +6,5 @@ package rds.photogallery
  */
 interface PhotoContentLoader {
     CompletePhoto load(String photoRelativePath)
+    CompletePhoto getToolkitImage(String photoRelativePath)
 }
