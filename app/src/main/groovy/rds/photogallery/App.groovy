@@ -133,6 +133,9 @@ class App {
         // ephemeral database that's built on demand.
         sqliteDataSource.setSynchronous(SQLiteConfig.SynchronousMode.OFF.toString())
         sqliteDataSource.setJournalMode(SQLiteConfig.JournalMode.WAL.toString())
+        // Allow for updates to the database - not normal, but it can be useful to modify the db on the fly to test
+        // things out or just for fun.
+        sqliteDataSource.setBusyTimeout(10000);
         buildRatingsDb()
         controller.switchRotation(new SqliteRatingsBasedPhotoRotation())
     }
@@ -339,11 +342,19 @@ class App {
     }
 
     File resolvePhotoPath(String photoPath) {
-        new File(rootDir, photoPath)
+        // While this whole app is built to treat paths as relative to some base dir, allowing for absolute paths here
+        // allows the possibility of sneaking other photos into the rotation by just inserting them into the db at
+        // runtime.
+        def path = Paths.get(photoPath)
+        if (path.isAbsolute()) {
+            return path.toFile()
+        } else {
+            return new File(rootDir, photoPath)
+        }
     }
 
     File resolvePhotoPath(PhotoData photoData) {
-        new File(rootDir, photoData.relativePath)
+        resolvePhotoPath(photoData.relativePath)
     }
 
     PhotoData getPhotoData(String relativePath) {
