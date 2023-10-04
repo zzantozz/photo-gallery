@@ -59,11 +59,11 @@ public class PhotoFrame {
         // constructor if you want to set rows...
         theFrameLayout = new GridLayout(rows, columns);
         mainDisplayArea.setLayout(theFrameLayout);
-        for (int i = 0; i < rows * columns; i++) {
-            PhotoPanel photoPanel = new PhotoPanel(this.name + ":panel" + panelCount.incrementAndGet());
-            photoPanels.add(photoPanel);
-            mainDisplayArea.add(photoPanel);
-        }
+        // The mainDisplayArea JPanel isn't new each time through here. If we're rebuilding an existing frame, it'll
+        // still have the old photo panels in it, so instead of just adding panels blindly, we need to ensure the right
+        // number of panels are there. We can do that with a no-op modify. It will arrange the panels according to the
+        // current frame configuration.
+        modifyGridLayout(0, 0);
         // ONLY after the panels are added, tell them what they need to be showing.
         setShowingRatings(getCurrentFrameConfiguration().isShowingRatings());
         setShowingNames(getCurrentFrameConfiguration().isShowingNames());
@@ -223,11 +223,19 @@ public class PhotoFrame {
         return modifyGridLayout(0, -1);
     }
 
+    /**
+     * Update the current panel grid by modifying the number of rows and columns in it. This looks at the current state
+     * and adds or removes panels as necessary to end up with a grid of the specified size. Each arg can be positive,
+     * negative, or zero. It even works if you pass zero for both args. Returns the panels that were added or removed
+     * as a result of the operation.
+     */
     private List<PhotoPanel> modifyGridLayout(int rowsModifier, int columnsModifier) {
         FrameConfiguration configuration = getCurrentFrameConfiguration();
         int currentRows = configuration.getRows();
         int currentColumns = configuration.getColumns();
-        int currentPanelCount = currentRows * currentColumns;
+        // Rather than calculating from config, get the actual number of panels that there are right now. This gives
+        // this method the ability to adapt current reality to any desired state.
+        int currentPanelCount = photoPanels.size();
         int newColumns = currentColumns + columnsModifier;
         int newRows = currentRows + rowsModifier;
         int newPanelCount = newColumns * newRows;
