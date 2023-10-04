@@ -46,6 +46,8 @@ class PopupListener extends MouseAdapter {
 
     private void maybeShowPopup(MouseEvent e) {
         final CompletePhoto photo = photoPanel.photoOnDisplay
+        // Guard against clicks on brand new panels whose photo haven't loaded yet
+        if (photo == null) return;
         final PhotoData photoData = photo.data
         if (e.isPopupTrigger()) {
             JPopupMenu menu = buildPopupMenu(photo)
