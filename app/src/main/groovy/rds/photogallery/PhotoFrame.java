@@ -86,14 +86,14 @@ public class PhotoFrame {
         result.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                frameState.getNormalConfig().setWidth(theFrame.getWidth());
-                frameState.getNormalConfig().setHeight(theFrame.getHeight());
+                getCurrentFrameConfiguration().setWidth(theFrame.getWidth());
+                getCurrentFrameConfiguration().setHeight(theFrame.getHeight());
             }
 
             @Override
             public void componentMoved(ComponentEvent e) {
-                frameState.getNormalConfig().setX(theFrame.getX());
-                frameState.getNormalConfig().setY(theFrame.getY());
+                getCurrentFrameConfiguration().setX(theFrame.getX());
+                getCurrentFrameConfiguration().setY(theFrame.getY());
             }
         });
 //        controlPanel.setVisible(!frameConfiguration.isDistractionFree());
@@ -146,6 +146,13 @@ public class PhotoFrame {
     private void addHotKeys() {
         addHotKey("D", "Toggle window decoration", e ->
                 setDistractionFree(!getCurrentFrameConfiguration().isDistractionFree()));
+        addHotKey("F", "Toggle full screen", e -> {
+            boolean wasFullScreen = frameState.isFullScreen();
+            frameState.setFullScreen(!wasFullScreen);
+            theFrame.dispose();
+            theFrame = buildInitialJFrame();
+            theFrame.setVisible(true);
+        });
         addHotKey("N", "Show photo names", this::toggleShowingNames);
         addHotKey("R", "Show ratings", this::toggleShowingRatings);
         addHotKey("T", "Show tags", this::toggleShowingTags);
