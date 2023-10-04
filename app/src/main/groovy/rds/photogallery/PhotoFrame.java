@@ -156,6 +156,7 @@ public class PhotoFrame {
         addHotKey("N", "Show photo names", this::toggleShowingNames);
         addHotKey("R", "Show ratings", this::toggleShowingRatings);
         addHotKey("T", "Show tags", this::toggleShowingTags);
+        addHotKey("RIGHT", "Next photos", e -> App.getInstance().getController().allPanelsNext());
     }
 
     public void toggleShowingNames(ActionEvent e) {

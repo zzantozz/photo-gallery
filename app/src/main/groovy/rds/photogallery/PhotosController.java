@@ -21,7 +21,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -159,7 +158,7 @@ public class PhotosController {
     private class AutoChangeTimerTask extends TimerTask {
         @Override
         public void run() {
-            next();
+            doAutoChange();
             startAutoChanging();
         }
     }
@@ -356,7 +355,7 @@ public class PhotosController {
     }
 
 
-    public void next() {
+    public void doAutoChange() {
         // Take out anything marked sticky
         List<PhotoPanelState> statesToConsider = photoPanelStates.values().stream()
                 .filter(state -> !state.sticky)
@@ -379,6 +378,13 @@ public class PhotosController {
             log.info("Auto changing photo on " + oldestState.photoPanel + " to " + next);
             oldestState.assignPhotoPath(next);
         }
+    }
+
+    public void allPanelsNext() {
+        List<PhotoPanelState> unstickyStates = photoPanelStates.values().stream()
+                .filter(state -> !state.sticky)
+                .collect(Collectors.toList());
+        unstickyStates.forEach((it) -> it.assignPhotoPath(photoRotation.next()));
     }
 
     public void removeRowFromFrame(PhotoFrame photoFrame) {
