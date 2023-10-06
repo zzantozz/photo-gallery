@@ -289,11 +289,11 @@ class App {
         String dir = FilenameUtils.getFullPath(relativePath)
         String baseName = FilenameUtils.getBaseName(relativePath)
         String extension = FilenameUtils.getExtension(relativePath)
-        String comprehensiveWayPath = comprehensiveRewriteCheck(relativePath, dir, baseName)
+        String comprehensiveWayPath = comprehensiveRewriteCheck(relativePath, dir, baseName, extension)
         String cheapWayPath = cheapRewriteCheck(relativePath, dir, baseName, extension)
         if (cheapWayPath != comprehensiveWayPath) {
-            log.warn("Found a rewrite inconsistency. Cheap path determined {} but comprehensive path determined {}",
-                    cheapWayPath, comprehensiveWayPath)
+            log.warn("Found a rewrite inconsistency for {}. Cheap path determined {} but comprehensive path determined {}",
+                    relativePath, cheapWayPath, comprehensiveWayPath)
         }
         cheapWayPath
     }
@@ -302,9 +302,11 @@ class App {
      * Looks for rewrites comprehensively, by scanning the whole directory for files with matching base names. This is
      * the original way but means more file system access, which can be slow when it's a network mount.
      */
-    String comprehensiveRewriteCheck(String relativePath, String dir, String baseName) {
-        String[] list = new File(rootDir, dir)
-                .list((dir1, name) -> name.startsWith(baseName + REWRITE_SUFFIX))
+    String comprehensiveRewriteCheck(String relativePath, String dir, String baseName, String extension) {
+        String[] list = new File(rootDir, dir).list((dir1, name) -> {
+            String n = name.toLowerCase()
+            return n.startsWith(baseName + REWRITE_SUFFIX) && n.endsWith(extension.toLowerCase())
+        })
         final String pathToLoad
         if (list == null) {
             log.warn("Failed to list contents of {}", dir)
@@ -317,7 +319,8 @@ class App {
         } else {
             pathToLoad = FilenameUtils.concat(dir, list[0])
         }
-        pathToLoad
+        // Make sure separators are correct, mostly for testing
+        FilenameUtils.separatorsToUnix(pathToLoad)
     }
 
     /**
@@ -326,18 +329,21 @@ class App {
      */
     String cheapRewriteCheck(String relativePath, String dir, String baseName, String extension) {
         File searchDir = new File(rootDir, dir)
-        String rewriteName1 = baseName + REWRITE_SUFFIX + "." + extension.toUpperCase()
-        String rewriteName2 = baseName + REWRITE_SUFFIX + "." + extension.toLowerCase()
+        String rewriteName1 = baseName + REWRITE_SUFFIX + "." + extension.toLowerCase()
+        String rewriteName2 = baseName + REWRITE_SUFFIX + "." + extension.toUpperCase()
+        final String pathToLoad
         if (new File(searchDir, rewriteName1).exists()) {
             log.info("Load {} in place of {}", rewriteName1, relativePath)
-            return FilenameUtils.concat(dir, rewriteName1)
+            pathToLoad = FilenameUtils.concat(dir, rewriteName1)
         } else if (new File(searchDir, rewriteName2).exists()) {
             log.info("Load {} in place of {}", rewriteName2, relativePath)
-            return FilenameUtils.concat(dir, rewriteName2)
+            pathToLoad = FilenameUtils.concat(dir, rewriteName2)
         } else {
             log.info("Load {}", relativePath)
-            return relativePath
+            pathToLoad = relativePath
         }
+        // Make sure separators are correct, mostly for testing
+        FilenameUtils.separatorsToUnix(pathToLoad)
     }
 
     /**
