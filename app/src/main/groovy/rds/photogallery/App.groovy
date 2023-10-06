@@ -305,7 +305,8 @@ class App {
     String comprehensiveRewriteCheck(String relativePath, String dir, String baseName, String extension) {
         String[] list = new File(rootDir, dir).list((dir1, name) -> {
             String n = name.toLowerCase()
-            return n.startsWith(baseName + REWRITE_SUFFIX) && n.endsWith(extension.toLowerCase())
+            String rewriteBase = baseName.toLowerCase() + REWRITE_SUFFIX
+            return n.startsWith(rewriteBase) && n.endsWith(extension.toLowerCase())
         })
         final String pathToLoad
         if (list == null) {

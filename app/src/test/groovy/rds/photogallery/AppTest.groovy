@@ -3,105 +3,141 @@
  */
 package rds.photogallery
 
+import org.apache.commons.io.FilenameUtils
 import spock.lang.Specification
 
 class AppTest extends Specification {
-    def setUpRewriteScenario() {
+    Map<String, String> setUpRewriteScenario(List<String> files) {
         def tempDir = File.createTempDir()
-        def dirName = 'photo-dir'
-        def photoDir = new File(tempDir, dirName)
-        def original = new File(photoDir, 'foo.jpg')
-        def gif = new File(photoDir, 'foo.gif')
-        def rewrite = new File(photoDir, 'foo-rewrite.jpg')
-        if (!photoDir.mkdir()) throw new RuntimeException('Failed to create test dir')
-        [original, gif, rewrite].each {
-            if (!it.createNewFile()) throw new RuntimeException('Failed to create test file')
+        // Create any dirs required by the test
+        files.collect{new File(tempDir, FilenameUtils.getFullPath(it)) }
+                .unique()
+                .each {if (!it.mkdir()) throw new RuntimeException("Failed to create test dir: ${it}")}
+        // Create each test file
+        files.each {
+            def photoFile = new File(tempDir, it)
+            if (!photoFile.createNewFile()) throw new RuntimeException("Failed to create test file: ${photoFile}")
         }
+        // Return details for the test to use
         [
                 rootDir: tempDir.toString(),
-                relativeDir: dirName,
-                baseFileName: 'foo',
-                originalPath: dirName + '/foo.jpg',
-                gifPath: dirName + '/foo.gif',
-                rewritePath: dirName + '/foo-rewrite.jpg',
         ]
     }
 
     def 'comprehensive rewrite check for jpg'() {
         setup:
-        def testFiles = setUpRewriteScenario()
+        def testFiles = setUpRewriteScenario(['dir1/foo.jpg', 'dir1/foo.gif', 'dir1/foo-rewrite.jpg'])
         def app = new App()
         app.rootDir = testFiles.rootDir
 
         when:
-        def result = app.comprehensiveRewriteCheck(testFiles.originalPath, testFiles.relativeDir, testFiles.baseFileName, 'jpg')
+        def result = app.comprehensiveRewriteCheck('dir1/foo.jpg', 'dir1', 'foo', 'jpg')
 
         then:
-        result == testFiles.rewritePath
+        result == 'dir1/foo-rewrite.jpg'
+    }
+
+    def 'comprehensive rewrite check for jpg with uppercase base'() {
+        setup:
+        def testFiles = setUpRewriteScenario(['dir1/FOO.jpg', 'dir1/FOO.gif', 'dir1/FOO-rewrite.jpg'])
+        def app = new App()
+        app.rootDir = testFiles.rootDir
+
+        when:
+        def result = app.comprehensiveRewriteCheck('dir1/FOO.jpg', 'dir1', 'FOO', 'jpg')
+
+        then:
+        result == 'dir1/FOO-rewrite.jpg'
+    }
+
+    def 'comprehensive rewrite check for jpg with uppercase extension'() {
+        setup:
+        def testFiles = setUpRewriteScenario(['dir1/foo.JPG', 'dir1/foo.GIF', 'dir1/foo-rewrite.JPG'])
+        def app = new App()
+        app.rootDir = testFiles.rootDir
+
+        when:
+        def result = app.comprehensiveRewriteCheck('dir1/foo.JPG', 'dir1', 'foo', 'JPG')
+
+        then:
+        result == 'dir1/foo-rewrite.JPG'
+    }
+
+    def 'comprehensive rewrite check for jpg with uppercase base and extension'() {
+        setup:
+        def testFiles = setUpRewriteScenario(['dir1/FOO.JPG', 'dir1/FOO.GIF', 'dir1/FOO-rewrite.JPG'])
+        def app = new App()
+        app.rootDir = testFiles.rootDir
+
+        when:
+        def result = app.comprehensiveRewriteCheck('dir1/FOO.JPG', 'dir1', 'FOO', 'JPG')
+
+        then:
+        result == 'dir1/FOO-rewrite.JPG'
     }
 
     def 'cheap rewrite check for jpg'() {
         setup:
-        def testFiles = setUpRewriteScenario()
+        def testFiles = setUpRewriteScenario(['dir1/foo.jpg', 'dir1/foo.gif', 'dir1/foo-rewrite.jpg'])
         def app = new App()
         app.rootDir = testFiles.rootDir
 
         when:
-        def result = app.cheapRewriteCheck(testFiles.originalPath, testFiles.relativeDir, testFiles.baseFileName, 'jpg')
+        def result = app.comprehensiveRewriteCheck('dir1/foo.jpg', 'dir1', 'foo', 'jpg')
 
         then:
-        result == testFiles.rewritePath
+        result == 'dir1/foo-rewrite.jpg'
     }
 
     def 'resolve rewrite for jpg'() {
         setup:
-        def testFiles = setUpRewriteScenario()
+        def testFiles = setUpRewriteScenario(['dir1/foo.jpg', 'dir1/foo.gif', 'dir1/foo-rewrite.jpg'])
         def app = new App()
         app.rootDir = testFiles.rootDir
 
         when:
-        def result = app.resolveRewrite(testFiles.originalPath)
+        def result = app.resolveRewrite('dir1/foo.jpg')
 
         then:
-        result == testFiles.rewritePath
+        result == 'dir1/foo-rewrite.jpg'
     }
 
     def 'comprehensive rewrite check for gif'() {
         setup:
-        def testFiles = setUpRewriteScenario()
+        def testFiles = setUpRewriteScenario(['dir1/foo.jpg', 'dir1/foo.gif', 'dir1/foo-rewrite.jpg'])
         def app = new App()
         app.rootDir = testFiles.rootDir
 
         when:
-        def result = app.comprehensiveRewriteCheck(testFiles.gifPath, testFiles.relativeDir, testFiles.baseFileName, 'gif')
+        def result = app.comprehensiveRewriteCheck('dir1/foo.gif', 'dir1', 'foo', 'gif')
 
         then:
-        result == testFiles.gifPath
+        result == 'dir1/foo.gif'
     }
 
     def 'cheap rewrite check for gif'() {
         setup:
-        def testFiles = setUpRewriteScenario()
+        def testFiles = setUpRewriteScenario(['dir1/foo.jpg', 'dir1/foo.gif', 'dir1/foo-rewrite.jpg'])
         def app = new App()
         app.rootDir = testFiles.rootDir
 
         when:
-        def result = app.cheapRewriteCheck(testFiles.gifPath, testFiles.relativeDir, testFiles.baseFileName, 'gif')
+        def result = app.comprehensiveRewriteCheck('dir1/foo.gif', 'dir1', 'foo', 'gif')
 
         then:
-        result == testFiles.gifPath
+        result == 'dir1/foo.gif'
     }
 
     def 'resolve rewrite for gif'() {
         setup:
-        def testFiles = setUpRewriteScenario()
+        def testFiles = setUpRewriteScenario(['dir1/foo.jpg', 'dir1/foo.gif', 'dir1/foo-rewrite.jpg'])
         def app = new App()
         app.rootDir = testFiles.rootDir
 
         when:
-        def result = app.resolveRewrite(testFiles.gifPath)
+        def result = app.resolveRewrite('dir1/foo.gif')
 
         then:
-        result == testFiles.gifPath
+        result == 'dir1/foo.gif'
     }
 }
