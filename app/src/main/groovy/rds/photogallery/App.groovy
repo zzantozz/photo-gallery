@@ -75,6 +75,10 @@ class App {
         photoContentLoader
     }
 
+    DataSource getSqliteDataSource() {
+        return sqliteDataSource
+    }
+
     ExecutorService getGeneralWorkPool() {
         throw new UnsupportedOperationException("Don't get the work pool directly. Use an appropriate submit* method!")
     }

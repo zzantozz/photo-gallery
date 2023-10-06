@@ -15,9 +15,9 @@ class SqliteRatingsBasedPhotoRotation implements PhotoRotation {
     private static final Logger log = LoggerFactory.getLogger(SqliteRatingsBasedPhotoRotation.class)
     public static final String CYCLE_EXHAUSTED = 'Cycle Exhausted'
 
-    final def frequencies = [:]
-    final def flatFreqList
-    final def totalFreqs
+    final Map<Integer, Integer> frequencies = [:]
+    final List<Integer> flatFreqList
+    final int totalFrequencies
     final def rand = new Random()
     final Map<Integer, String> currentCycleByRating
 
@@ -35,7 +35,7 @@ class SqliteRatingsBasedPhotoRotation implements PhotoRotation {
         conn.close()
 
         flatFreqList = frequencies.collectMany { Collections.nCopies(it.value, it.key) }
-        totalFreqs = flatFreqList.size()
+        totalFrequencies = flatFreqList.size()
         currentCycleByRating = frequencies.collectEntries { [it.key, 'A'] }
     }
 
@@ -45,7 +45,7 @@ class SqliteRatingsBasedPhotoRotation implements PhotoRotation {
     }
 
     String doNext() {
-        def rating = flatFreqList[rand.nextInt(totalFreqs)]
+        int rating = flatFreqList[rand.nextInt(totalFrequencies)]
         def cycleName = currentCycleByRating[rating]
         def conn = App.instance.sqliteDataSource.getConnection()
         if (log.isInfoEnabled()) {
@@ -82,15 +82,14 @@ class SqliteRatingsBasedPhotoRotation implements PhotoRotation {
                 toUpdate = pastPhotos
             } else {
                 toUpdate = comingPhotos
-                def otherCycle = currentCycle == 'A' ? 'B' : 'A'
             }
             toUpdate.put(rating, count)
         }
         resultSet.close()
         statement.close()
         def allKeys = (pastPhotos.keySet() + comingPhotos.keySet()).unique().sort()
-        def descs = allKeys.collect {"$it(${currentCycleByRating[it]}): ${comingPhotos[it]}->${pastPhotos[it]}" }
-        log.info("Rating cycles: $descs")
+        def descriptions = allKeys.collect {"$it(${currentCycleByRating[it]}): ${comingPhotos[it]}->${pastPhotos[it]}" }
+        log.info("Rating cycles: $descriptions")
     }
 
     static String findOneByRating(Connection conn, int rating, String cycleName) {
