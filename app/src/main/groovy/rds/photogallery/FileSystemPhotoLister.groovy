@@ -1,12 +1,14 @@
 package rds.photogallery
 
+import org.apache.commons.io.FilenameUtils
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
 class FileSystemPhotoLister implements PhotoLister {
     String rootDir
-    Iterator<Path> fileIterator
+    Iterator<String> fileIterator
     List<String> photoFileExtensions = ['jpg', 'jpeg', 'png', 'gif']
 
     FileSystemPhotoLister(String rootDir) {
@@ -24,7 +26,7 @@ class FileSystemPhotoLister implements PhotoLister {
         fileIterator.next()
     }
 
-    private Iterator<Path> getIterator() {
+    private Iterator<String> getIterator() {
         def rootPath = Paths.get(rootDir)
         this.fileIterator = App.metrics().timeAndReturn("getting photo iterator from file system", {
             Files.walk(Paths.get(rootDir))
@@ -34,6 +36,7 @@ class FileSystemPhotoLister implements PhotoLister {
                         p.fileName.toString().toLowerCase().endsWith(it)
                     })
                     .map(rootPath::relativize)
+                    .map {FilenameUtils.separatorsToUnix(it.toString()) }
                     .iterator()
         })
         fileIterator
