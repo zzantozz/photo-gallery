@@ -15,7 +15,12 @@ class Settings {
     }
 
     List<String> asStringList(Setting setting) {
-        setting.getValue().split("\\s*,\\s*")
+        def value = setting.getValue()
+        if (value.isEmpty()) {
+            []
+        } else {
+            value.split("\\s*,\\s*")
+        }
     }
 
     void setString(Setting setting, String value) {

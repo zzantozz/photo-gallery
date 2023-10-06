@@ -37,19 +37,45 @@ class TagsFilter implements Predicate<PhotoData> {
 
     @Override
     boolean apply(final PhotoData photoData) {
-        boolean anyPositiveMatches = Iterables.any(positiveCriteria, new Predicate<Criteria>() {
-            @Override
-            boolean apply(Criteria input) {
-                return input.apply(photoData)
-            }
-        })
-        boolean allNegativesMatch = Iterables.all(negativeCriteria, new Predicate<Criteria>() {
-            @Override
-            boolean apply(Criteria input) {
-                return input.apply(photoData)
-            }
-        })
-        return (anyPositiveMatches || positiveCriteria.isEmpty()) && (allNegativesMatch || negativeCriteria.isEmpty())
+        // This is a predicate, meaning it should return true for a match. A match in this case means the candidate
+        // should be filtered out, i.e. not be in the list of photos shown.
+        //
+        // The way tag filtering is supposed to work is:
+        //
+        // 1. If no filtering is configured, everything should be shown.
+        // 2. If there are negative filters, everything except those should be shown.
+        // 3. If there are positive filters, only matching photos should be shown.
+        // 4. If there are both positive and negative filters, only show photos that match the positives and don't match
+        //    the negatives.
+        //
+        // So, if positive criteria is empty, include it. If positive is specified, include only if it matches. If
+        // negative is empty, include it. If negative is specified, include only if it doesn't match. Then combine the
+        // positive and negative match to find the answer.
+        final boolean positiveMatch;
+        if (positiveCriteria.isEmpty()) {
+            positiveMatch = true;
+        } else {
+            positiveMatch = Iterables.any(positiveCriteria, new Predicate<Criteria>() {
+                @Override
+                boolean apply(Criteria input) {
+                    return input.apply(photoData)
+                }
+            })
+        }
+        final boolean negativeMatch;
+        if (negativeCriteria.isEmpty()) {
+            negativeMatch = false;
+        } else {
+            negativeMatch = Iterables.any(negativeCriteria, new Predicate<Criteria>() {
+                @Override
+                boolean apply(Criteria input) {
+                    return input.apply(photoData)
+                }
+            })
+        }
+        // Now, return true if this should be filtered, which would be if there was a negative match or if
+        // there was no positive match
+        negativeMatch || !positiveMatch
     }
 
     static class Criteria implements Predicate<PhotoData> {

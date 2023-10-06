@@ -165,9 +165,11 @@ class App {
         def excludedPaths = settings.asStringList(Settings.Setting.EXCLUDED_PATHS)
         def tagsFilter = new TagsFilter(settings.asString(Settings.Setting.TAG_FILTER))
         def photoPredicate = { PhotoData it ->
-            def filteredTags = tagsFilter.apply(it)
-            def filteredByPath = excludedPaths.any { path -> it.relativePath.startsWith(path) }
-            !filteredTags && !filteredByPath
+            def filteredByTags = tagsFilter.apply(it)
+            def filteredByPath = !excludedPaths.isEmpty() && excludedPaths.any { path ->
+                it.relativePath.startsWith(path)
+            }
+            !filteredByTags && !filteredByPath
         }
         def listerForDb = new FileSystemPhotoLister(rootDir)
         def connection = sqliteDataSource.getConnection()
