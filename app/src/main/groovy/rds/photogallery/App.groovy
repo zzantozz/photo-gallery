@@ -32,20 +32,20 @@ class App {
     private static final Logger log = LoggerFactory.getLogger(App.class)
 
     // Keeps track of frames, just so we can know when the last frame is closed and stop the app as a result
-    List<PhotoFrame> photoFrames = []
-    ExecutorService generalWorkPool
-    ScheduledExecutorService scheduler
-    PersistentFrameState lastFrameState
-    DataSource sqliteDataSource
+    private List<PhotoFrame> photoFrames = []
+    private ExecutorService generalWorkPool
+    private ScheduledExecutorService scheduler
+    private PersistentFrameState lastFrameState
+    private DataSource sqliteDataSource
 
-    Settings settings
-    Metrics metrics
+    private Settings settings
+    private Metrics metrics
     // Remember the root dir we're loading photos from, mainly so relative paths can be quickly resolved.
-    String rootDir
+    private String rootDir
 
-    PhotoContentLoader photoContentLoader
-    PhotosController controller
-    AtomicInteger frameCount = new AtomicInteger(1)
+    private PhotoContentLoader photoContentLoader
+    private PhotosController controller
+    private AtomicInteger frameCount = new AtomicInteger(1)
 
     private static final App INSTANCE = new App()
     public static final String REWRITE_SUFFIX = '-rewrite'
@@ -65,6 +65,22 @@ class App {
 
     static Metrics metrics() {
         instance.metrics
+    }
+
+    PhotosController getController() {
+        controller
+    }
+
+    PhotoContentLoader getPhotoContentLoader() {
+        photoContentLoader
+    }
+
+    ExecutorService getGeneralWorkPool() {
+        throw new UnsupportedOperationException("Don't get the work pool directly. Use an appropriate submit* method!")
+    }
+
+    ScheduledExecutorService getScheduler() {
+        throw new UnsupportedOperationException("Don't get the work pool directly. Use an appropriate schedule* method!")
     }
 
     void submitGeneralWork(Runnable task) {

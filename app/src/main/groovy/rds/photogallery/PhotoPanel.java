@@ -82,6 +82,7 @@ public class PhotoPanel extends JPanel {
         return (imageWidth == myWidth && imageHeight <= myHeight) ||
                 (imageHeight == myHeight && imageWidth <= myWidth);
     }
+
     @Override
     public void paint(Graphics g) {
         if (photo == null) {
