@@ -20,7 +20,8 @@ import java.util.Arrays;
 
 /**
  * Shows a single photo. It's told which photo to display at any given time and doesn't try to do anything but display
- * it.
+ * it. It does, however, emit events to the controller about changes to its state that would impact the displayed photo.
+ * For instance, when it's resized, the controller needs to know to load an appropriately sized photo for this panel.
  *
  * This guy is in Java instead of Groovy because of classes like java.awt.{Point, Rectangle} that have int properties
  * like "x" and getters like getX() shadowing them that return doubles instead of ints. Groovy always resolves object.x
