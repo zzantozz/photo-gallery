@@ -269,12 +269,14 @@ class App {
             }
         });
         photoFrame.addHotKey("ESCAPE", "Quit", (e) -> {
-            controller.pauseAndHideAll()
+            controller.stopAutoChanging()
+            photoFrames.each{ it.hide() }
             int answer = HomelessDialog.showConfirmDialog(null, 'Are you sure?', 'Exit now?', JOptionPane.YES_NO_OPTION)
             if (answer == JOptionPane.YES_OPTION) {
                 shutDown()
             } else {
-                controller.unpauseAndUnhideAll()
+                photoFrames.each{ it.show() }
+                controller.startAutoChanging()
             }
         });
     }
@@ -366,6 +368,7 @@ class App {
         def frameStatesString = mapper.writeValueAsString(frameStates) + '\n'
         Files.write(Paths.get(settings.asString(Settings.Setting.FRAME_STATE_FILE)), frameStatesString.bytes)
         controller.dispose()
+        photoFrames.each { it.dispose() }
     }
 
     File resolvePhotoPath(String photoPath) {

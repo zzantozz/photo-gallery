@@ -32,7 +32,6 @@ public class PhotosController {
 
     public static final Logger log = LoggerFactory.getLogger(PhotosController.class);
     private PhotoRotation photoRotation;
-    private final List<PhotoFrame> photoFrames = new CopyOnWriteArrayList<>();
     private static final int changeDelayMillis = 7500;
     // States of tracked panels, used to manage photo changes, resizes, and so on
     private final Map<PhotoPanel, PhotoPanelState> photoPanelStates = new ConcurrentHashMap<>();
@@ -153,16 +152,6 @@ public class PhotosController {
         }
     }
 
-    public void pauseAndHideAll() {
-        stopAutoChanging();
-        photoFrames.forEach(PhotoFrame::hide);
-    }
-
-    public void unpauseAndUnhideAll() {
-        photoFrames.forEach(PhotoFrame::show);
-        startAutoChanging();
-    }
-
     public void toggleSticky(PhotoPanel photoPanel) {
         PhotoPanelState state = photoPanelStates.get(photoPanel);
         state.sticky = !state.sticky;
@@ -178,7 +167,6 @@ public class PhotosController {
 
     public void dispose() {
         timer.cancel();
-        photoFrames.forEach(PhotoFrame::dispose);
     }
 
     private ThrowableReporting.Runnable submitNeeds() {
