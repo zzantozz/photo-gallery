@@ -248,7 +248,6 @@ class App {
     def newPhotoFrame(PersistentFrameState frameState) {
         def newFrame = new PhotoFrame("frame" + frameCount.getAndIncrement(), frameState)
         newFrame.onDispose {
-            controller.unadopt(it)
             photoFrames.remove(it)
             if (photoFrames.isEmpty()) {
                 lastFrameState = it.frameState
@@ -257,7 +256,6 @@ class App {
         }
         registerGlobalHotKeys(newFrame)
         photoFrames.add(newFrame)
-        controller.adopt(newFrame)
         newFrame.show()
     }
 

@@ -106,32 +106,22 @@ public class PhotosController {
         this.photoRotation = photoRotation;
     }
 
-    public void adopt(PhotoFrame photoFrame) {
-        photoFrames.add(photoFrame);
-        managePanels(photoFrame.getPanels());
-    }
-
-    public void unadopt(PhotoFrame photoFrame) {
-        photoFrames.remove(photoFrame);
-        unmanagePanels(photoFrame.getPanels());
-    }
-
-    private void managePanel(PhotoPanel panel) {
+    public void managePanel(PhotoPanel panel) {
         managePanels(Collections.singletonList(panel));
     }
 
-    private void managePanels(Collection<PhotoPanel> panels) {
+    public void managePanels(Collection<PhotoPanel> panels) {
         for (PhotoPanel panel : panels) {
             PhotoPanelState state = new PhotoPanelState(panel, photoRotation.next());
             photoPanelStates.put(panel, state);
         }
     }
 
-    private void unmanagePanel(PhotoPanel panel) {
+    public void unmanagePanel(PhotoPanel panel) {
         unmanagePanels(Collections.singletonList(panel));
     }
 
-    private void unmanagePanels(Collection<PhotoPanel> panels) {
+    public void unmanagePanels(Collection<PhotoPanel> panels) {
         photoPanelStates.entrySet().removeIf(entry -> panels.contains(entry.getKey()));
     }
 
@@ -385,26 +375,6 @@ public class PhotosController {
                 .filter(state -> !state.sticky)
                 .collect(Collectors.toList());
         unstickyStates.forEach((it) -> it.assignPhotoPath(photoRotation.next()));
-    }
-
-    public void removeRowFromFrame(PhotoFrame photoFrame) {
-        List<PhotoPanel> removedPanels = photoFrame.removeRow();
-        unmanagePanels(removedPanels);
-    }
-
-    public void addRowToFrame(PhotoFrame photoFrame) {
-        List<PhotoPanel> newPanels = photoFrame.addRow();
-        managePanels(newPanels);
-    }
-
-    public void removeColumnFromFrame(PhotoFrame photoFrame) {
-        List<PhotoPanel> removedPanels = photoFrame.removeColumn();
-        unmanagePanels(removedPanels);
-    }
-
-    public void addColumnToFrame(PhotoFrame photoFrame) {
-        List<PhotoPanel> newPanels = photoFrame.addColumn();
-        managePanels(newPanels);
     }
 
     public void panelImageSizeIsWrong(PhotoPanel photoPanel) {

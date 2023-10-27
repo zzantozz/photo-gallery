@@ -39,10 +39,10 @@ public class PhotoFrame {
         this.frameState = frameState;
         // Set up things associated to the PhotoFrame. This needs to happen ONCE, regardless of how many underlying
         // JFrames are created and destroyed over time.
-        lessRowsButton.addActionListener(e -> App.getInstance().getController().removeRowFromFrame(PhotoFrame.this));
-        moreRowsButton.addActionListener(e -> App.getInstance().getController().addRowToFrame(PhotoFrame.this));
-        lessColumnsButton.addActionListener(e -> App.getInstance().getController().removeColumnFromFrame(PhotoFrame.this));
-        moreColumnsButton.addActionListener(e -> App.getInstance().getController().addColumnToFrame(PhotoFrame.this));
+        lessRowsButton.addActionListener(e -> removeRow());
+        moreRowsButton.addActionListener(e -> addRow());
+        lessColumnsButton.addActionListener(e -> removeColumn());
+        moreColumnsButton.addActionListener(e -> addColumn());
         addHotKeys();
         // Now set up the JFrame, which is the visible component here and may be disposed and recreated multiple times
         // over the life of a single PhotoFrame.
@@ -256,18 +256,21 @@ public class PhotoFrame {
         theFrameLayout.setRows(newRows);
         int panelDiff = newPanelCount - currentPanelCount;
         List<PhotoPanel> changedPanels = new ArrayList<>();
+        PhotosController controller = App.getInstance().getController();
         if (panelDiff > 0) {
             for (int i = 0; i < panelDiff; i++) {
                 PhotoPanel photoPanel = new PhotoPanel(this.name + ":panel" + panelCount.incrementAndGet());
                 photoPanels.add(photoPanel);
                 mainDisplayArea.add(photoPanel);
                 changedPanels.add(photoPanel);
+                controller.managePanel(photoPanel);
             }
         } else {
             for (int i = 0; i < -1 * panelDiff; i++) {
                 PhotoPanel photoPanel = photoPanels.remove(0);
                 mainDisplayArea.remove(photoPanel);
                 changedPanels.add(photoPanel);
+                controller.unmanagePanel(photoPanel);
             }
         }
         mainDisplayArea.validate();
