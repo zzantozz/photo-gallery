@@ -37,13 +37,19 @@ public class PhotoFrame {
     public PhotoFrame(String name, PersistentFrameState frameState) {
         this.name = name;
         this.frameState = frameState;
-//        setUpControls(currentFrameConfiguration().getRows(), currentFrameConfiguration().getColumns());
+        // Set up things associated to the PhotoFrame. This needs to happen ONCE, regardless of how many underlying
+        // JFrames are created and destroyed over time.
+        lessRowsButton.addActionListener(e -> App.getInstance().getController().removeRowFromFrame(PhotoFrame.this));
+        moreRowsButton.addActionListener(e -> App.getInstance().getController().addRowToFrame(PhotoFrame.this));
+        lessColumnsButton.addActionListener(e -> App.getInstance().getController().removeColumnFromFrame(PhotoFrame.this));
+        moreColumnsButton.addActionListener(e -> App.getInstance().getController().addColumnToFrame(PhotoFrame.this));
         addHotKeys();
-        this.theFrame = buildInitialJFrame();
-//        cloneButton.addActionListener(e -> Application.instance.newPhotoFrame(PhotoFrameAdvanced.this));
+        // Now set up the JFrame, which is the visible component here and may be disposed and recreated multiple times
+        // over the life of a single PhotoFrame.
+        this.theFrame = newJFrameForPhotoFrame();
     }
 
-    private JFrame buildInitialJFrame() {
+    private JFrame newJFrameForPhotoFrame() {
         final FrameConfiguration frameConfiguration;
         if (this.frameState.isFullScreen()) {
             frameConfiguration = this.frameState.getFullScreenConfig();
@@ -99,10 +105,6 @@ public class PhotoFrame {
 //        controlPanel.setVisible(!frameConfiguration.isDistractionFree());
         rowsField.setText(Integer.toString(frameConfiguration.getRows()));
         columnsField.setText(Integer.toString(frameConfiguration.getColumns()));
-        lessRowsButton.addActionListener(e -> App.getInstance().getController().removeRowFromFrame(PhotoFrame.this));
-        moreRowsButton.addActionListener(e -> App.getInstance().getController().addRowToFrame(PhotoFrame.this));
-        lessColumnsButton.addActionListener(e -> App.getInstance().getController().removeColumnFromFrame(PhotoFrame.this));
-        moreColumnsButton.addActionListener(e -> App.getInstance().getController().addColumnToFrame(PhotoFrame.this));
 /*
         result.addComponentListener(new ComponentAdapter() {
             // Get the panels set up the first time this frame is shown, but I don't think it needs to
@@ -150,7 +152,7 @@ public class PhotoFrame {
             boolean wasFullScreen = frameState.isFullScreen();
             frameState.setFullScreen(!wasFullScreen);
             safeDispose();
-            theFrame = buildInitialJFrame();
+            theFrame = newJFrameForPhotoFrame();
             theFrame.setVisible(true);
         });
         addHotKey("N", "Show photo names", this::toggleShowingNames);
@@ -198,7 +200,7 @@ public class PhotoFrame {
     public void setDistractionFree(boolean distractionFree) {
         getCurrentFrameConfiguration().setDistractionFree(distractionFree);
         safeDispose();
-        this.theFrame = buildInitialJFrame();
+        this.theFrame = newJFrameForPhotoFrame();
         this.theFrame.setVisible(true);
     }
 
